@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Orden de Trabajo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 9px;
+            color: #000;
+            padding: 10px;
+        }
+        /* ENCABEZADO COMPACTO */
+        .header {
+            border: 2px solid #000;
+            display: table;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        .header-row {
+            display: table-row;
+        }
+        .h-logo {
+            display: table-cell;
+            width: 33%;
+            padding: 5px;
+            text-align: left;
+        }
+        .h-logo img {
+            max-width: 100px;
+            max-height: 100px;
+        }
+        .h-empresa {
+            display: table-cell;
+            width: 34%;
+            padding: 5px 10px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .h-empresa strong {
+            font-size: 12px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .h-empresa div {
+            font-size: 8px;
+            line-height: 1.3;
+        }
+        .h-orden {
+            display: table-cell;
+            width: 33%;
+            padding: 5px;
+            text-align: right;
+            vertical-align: middle;
+        }
+        .h-orden-title {
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        .h-orden-codigo {
+            font-size: 16px;
+            font-weight: bold;
+            color: #c00;
+            margin-bottom: 3px;
+        }
+        .h-qr {
+            display: inline-block;
+        }
+        .h-qr img {
+            width: 50px;
+            height: 50px;
+        }
+        .h-qr-label {
+            font-size: 7px;
+            color: #666;
+        }
+        /* LAYOUT PRINCIPAL */
+        .main {
+            display: table;
+            width: 100%;
+        }
+        .main-row {
+            display: table-row;
+        }
+        .col-left {
+            display: table-cell;
+            width: 60%;
+            padding-right: 10px;
+            border-right: 1px dashed #999;
+            vertical-align: top;
+        }
+        .col-right {
+            display: table-cell;
+            width: 40%;
+            padding-left: 10px;
+            vertical-align: top;
+        }
+        /* SECCIÓN */
+        .seccion {
+            margin-bottom: 6px;
+        }
+        .sec-title {
+            background: #333;
+            color: white;
+            padding: 2px 5px;
+            font-weight: bold;
+            font-size: 9px;
+            margin-bottom: 4px;
+        }
+        /* CAMPOS */
+        .fila {
+            margin-bottom: 3px;
+            line-height: 1.4;
+        }
+        .label {
+            font-weight: bold;
+            display: inline-block;
+        }
+        .valor {
+            border-bottom: 1px solid #000;
+            display: inline-block;
+            padding: 0 3px;
+        }
+        /* DISPOSITIVOS - TABLA COMPACTA */
+        .dispositivos-tabla {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            font-size: 8px;
+        }
+        .dispositivos-tabla th {
+            background: #f0f0f0;
+            border: 1px solid #999;
+            padding: 2px 3px;
+            font-weight: bold;
+            text-align: left;
+        }
+        .dispositivos-tabla td {
+            border: 1px solid #ccc;
+            padding: 2px 3px;
+            vertical-align: top;
+        }
+        
+        /* TABLA DE CHECKS */
+        .tabla-checks {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            font-size: 8px;
+        }
+        .tabla-checks th {
+            background: #f0f0f0;
+            border: 1px solid #999;
+            padding: 3px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .tabla-checks td {
+            border: 1px solid #ccc;
+            padding: 3px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .tabla-checks td:first-child {
+            text-align: left;
+            font-weight: normal;
+        }
+        .cb {
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid #000;
+            display: inline-block;
+        }
+        
+        /* CAMPOS DE VALORES */
+        .valores-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px dashed #999;
+        }
+        .valor-campo {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .valor-campo label {
+            font-size: 7.5px;
+            font-weight: bold;
+            margin-bottom: 2px;
+            color: #333;
+        }
+        .valor-campo-input {
+            border: 1px solid #000;
+            padding: 3px 5px;
+            min-height: 20px;
+            background: #fff;
+            font-size: 8px;
+        }
+        
+        /* TOTALES */
+        .totales {
+            border: 1px solid #000;
+            padding: 5px;
+            margin-top: 6px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-size: 9px;
+        }
+        .total-row.main {
+            font-weight: bold;
+            font-size: 10px;
+            color: #c00;
+            border-top: 1px solid #000;
+            padding-top: 3px;
+            margin-top: 3px;
+        }
+        .total-val {
+            border-bottom: 1px solid #000;
+            min-width: 70px;
+            text-align: right;
+            padding: 0 3px;
+        }
+        /* TÉRMINOS */
+        .terminos-title {
+            background: #333;
+            color: white;
+            padding: 3px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 9px;
+            margin-bottom: 5px;
+        }
+        .terminos ol {
+            padding: 0px 20px;
+            font-size: 10px;
+            line-height: 1.35;
+            text-align: justify;
+        }
+        .terminos li {
+            margin-bottom: 3px;
+        }
+        .nota-roja {
+            margin-top: 6px;
+            padding: 4px;
+            background: #ffe0e0;
+            border: 1px solid #c00;
+            font-size: 7.5px;
+            font-weight: bold;
+            text-align: center;
+            color: #c00;
+        }
+        /* FIRMA */
+        .firma {
+            margin-top: 15px;
+            text-align: center;
+        }
+        .firma-linea {
+            border-top: 2px solid #000;
+            width: 75%;
+            margin: 30px auto 0;
+            padding-top: 3px;
+            font-size: 8px;
+            font-weight: bold;
+        }
+        /* PIE */
+        .footer {
+            margin-top: 5px;
+            font-size: 7px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <!-- ENCABEZADO -->
+    <div class="header">
+        <div class="header-row">
+            <div class="h-logo">
+                <img src="" alt="Logo">
+            </div>
+            <div class="h-empresa">
+                <strong>NOMBRE EMPRESA</strong>
+                <div>
+                   Dirección de la empresa<br>
+                    Email: correo@empresa.com<br>
+                    Telf: (04) 123-4567
+                </div>
+            </div>
+            <div class="h-orden">
+                <div class="h-orden-title">ORDEN DE TRABAJO</div>
+                <div class="h-orden-codigo">001170</div>
+                <div class="h-qr">
+                    <img src="" alt="QR">
+                    <div class="h-qr-label">Seguimiento</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CONTENIDO -->
+    <div class="main">
+        <div class="main-row">
+            <!-- COLUMNA IZQUIERDA -->
+            <div class="col-left">
+                <!-- CLIENTE -->
+                <div class="seccion">
+                    <div class="sec-title">DATOS DEL CLIENTE</div>
+                    <div class="fila">
+                        <span class="label">Cliente:</span>
+                        <span class="valor" style="min-width: 250px;">Kevin Lozano</span>
+                    </div>
+                    <div class="fila">
+                        <span class="label">Cédula:</span>
+                        <span class="valor" style="min-width: 100px;">0925315102</span>
+                        <span class="label" style="margin-left: 10px;">Teléfono:</span>
+                        <span class="valor" style="min-width: 90px;">0998765432</span>
+                    </div>
+                    <div class="fila">
+                        <span class="label">Email:</span>
+                        <span class="valor" style="min-width: 180px;">kevin@email.com</span>
+                        <span class="label" style="margin-left: 10px;">Fecha:</span>
+                        <span class="valor" style="min-width: 100px;">26/11/23</span>
+                    </div>
+                </div>
+                
+                <!-- DISPOSITIVOS -->
+                <div class="seccion">
+                    <div class="sec-title">DISPOSITIVOS</div>
+                    <table class="dispositivos-tabla">
+                        <thead>
+                            <tr>
+                                <th style="width: 8%;">#</th>
+                                <th style="width: 15%;">Tipo</th>
+                                <th style="width: 25%;">Marca/Modelo</th>
+                                <th style="width: 20%;">IMEI/Serie</th>
+                                <th style="width: 32%;">Problema Reportado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>Laptop</td>
+                                <td>Asus TUF Gaming</td>
+                                <td>ASJH4782333</td>
+                                <td>No enciende, posible falla en placa madre</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- ESTADO DE LOS EQUIPOS -->
+                <div class="seccion">
+                    <div class="sec-title">ESTADO DE LOS EQUIPOS</div>
+                    
+                    <div style="border: 1px solid #000; padding: 6px; margin-bottom: 5px; background: #fafafa;">
+                        <div style="font-weight: bold; font-size: 8px; margin-bottom: 4px; color: #333;">
+                            Equipo #1: Laptop - Asus TUF Gaming
+                        </div>
+                        
+                        <!-- Tabla de checks -->
+                        <table class="tabla-checks">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>SI</th>
+                                    <th>NO</th>
+                                    <th></th>
+                                    <th>SI</th>
+                                    <th>NO</th>
+                                    <th></th>
+                                    <th>SI</th>
+                                    <th>NO</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Batería</td>
+                                    <td><span class="cb"></span></td>
+                                    <td><span class="cb"></span></td>
+                                    <td>Enciende</td>
+                                    <td><span class="cb"></span></td>
+                                    <td><span class="cb"></span></td>
+                                    <td>Cargador</td>
+                                    <td><span class="cb"></span></td>
+                                    <td><span class="cb"></span></td>
+                                </tr>
+                                <tr>
+                                    <td>Carcasa Rota</td>
+                                    <td><span class="cb"></span></td>
+                                    <td><span class="cb"></span></td>
+                                    <td>Riesgos</td>
+                                    <td><span class="cb"></span></td>
+                                    <td><span class="cb"></span></td>
+                                    <td>Equipo Abierto</td>
+                                    <td><span class="cb"></span></td>
+                                    <td><span class="cb"></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <!-- Campos de valores -->
+                        <div class="valores-row">
+                            <div class="valor-campo">
+                                <label>Valor Aprox. Mano de Obra:</label>
+                                <div class="valor-campo-input">$ __________</div>
+                            </div>
+                            <div class="valor-campo">
+                                <label>Valor Aprox. Repuestos:</label>
+                                <div class="valor-campo-input">$ __________</div>
+                            </div>
+                            <div class="valor-campo">
+                                <label>Valor de Revisión:</label>
+                                <div class="valor-campo-input">$ __________</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Observaciones -->
+                        <div style="margin-top: 6px; font-size: 7.5px;">
+                            <strong>Observaciones: </strong>
+                            <span style="border-bottom: 1px solid #999; display: inline-block; width: 84%; padding-left: 3px;">&nbsp;</span>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <!-- TOTALES -->
+                <div class="totales">
+                    <div class="total-row">
+                        <span>Mano de Obra:</span>
+                        <span class="total-val">$ 0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Repuestos:</span>
+                        <span class="total-val">$ 0.00</span>
+                    </div>
+                    <div class="total-row main">
+                        <span>TOTAL:</span>
+                        <span class="total-val">$ 0.00</span>
+                    </div>
+                    <div style="height: 3px;"></div>
+                    <div class="total-row">
+                        <span>Abono:</span>
+                        <span class="total-val">$</span>
+                    </div>
+                    <div class="total-row">
+                        <span>Saldo:</span>
+                        <span class="total-val">$</span>
+                    </div>
+                </div>
+                <div class="footer">
+                    Generado: 07/01/2026 10:30:00
+                </div>
+            </div>
+            
+            <!-- COLUMNA DERECHA -->
+            <div class="col-right">
+                <div class="terminos">
+                    <div class="terminos-title">TÉRMINOS Y CONDICIONES</div>
+                    <ol>
+                        <li>La empresa considerará en abandono todo equipo luego de 30 días de su ingreso, no haciéndose responsable por pérdida o extravío.</li>
+                        <li>Garantía de 15 días continuos desde la entrega, solo por el motivo de reparación original.</li>
+                        <li>El equipo solo será retirado por el titular de esta orden. Caso contrario, se requiere autorización firmada y copia de cédula del titular.</li>
+                        <li>La garantía aplica solo si la etiqueta ANTI-FRAUDE no ha sido removida ni el equipo revisado por terceros.</li>
+                        <li>El costo de revisión se exonera si se ordena la reparación. De lo contrario, debe cancelarse para retirar el equipo.</li>
+                        <li>Garantía NO aplica a daños por humedad, fallas eléctricas o golpes.</li>
+                        <li>La empresa no se responsabiliza por fallas distintas al motivo de reparación.</li>
+                        <li>DISPLAYS Y TÁCTILES NO TIENEN GARANTÍA. Deben probarse en el local antes de retirarse.</li>
+                        <li>Casos de garantía cubiertos en 15 días hábiles. NO HAY GARANTÍA para equipos recibidos apagados o mojados.</li>
+                        <li>El cliente acepta estos términos y autoriza revisar/reparar el equipo al firmar.</li>
+                    </ol>
+                    <div class="nota-roja">
+                        ⚠ TODO EQUIPO PASADOS 30 DÍAS DE INGRESO Y REPARACIÓN SERÁ SUBASTADO
+                    </div>
+                </div>
+                <div class="firma">
+                    <div class="firma-linea">
+                        FIRMA DE CONFORMIDAD<br>
+                        CI: 0925315102
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
