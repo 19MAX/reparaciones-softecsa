@@ -41,19 +41,8 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table id="ordenes-datatables" class="display table table-striped table-hover">
+                    <table id="ordenes-datatables" class="table table-bordered ">
                         <thead>
-                            <tr>
-                                <th># Orden</th>
-                                <th>Fecha</th>
-                                <th>Cliente</th>
-                                <th>Dispositivos (Resumen)</th>
-                                <th>Prioridad</th>
-                                <th>Estado</th>
-                                <th style="width: 10%">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tfoot>
                             <tr>
                                 <th># Orden</th>
                                 <th>Fecha</th>
@@ -61,9 +50,9 @@
                                 <th>Dispositivos</th>
                                 <th>Prioridad</th>
                                 <th>Estado</th>
-                                <th>Acciones</th>
+                                <th style="width: 10%">Acciones</th>
                             </tr>
-                        </tfoot>
+                        </thead>
                         <tbody>
                             <?php if (!empty($ordenes) && is_array($ordenes)): ?>
                                 <?php foreach ($ordenes as $orden): ?>
@@ -72,7 +61,7 @@
                                             <?= esc($orden['codigo_orden']) ?>
                                         </td>
                                         <td>
-                                            <?= date('d/m/Y', strtotime($orden['created_at'])) ?>
+                                            <?= formatear_fecha($orden['created_at'], 'solo_fecha') ?>
                                             <br>
                                             <small class="text-muted">
                                                 <?= date('H:i', strtotime($orden['created_at'])) ?>
@@ -80,8 +69,7 @@
                                         </td>
                                         <td>
                                             <div class="fw-bold">
-                                                <?= esc($orden['nombres']) ?>
-                                                <?= esc($orden['apellidos']) ?>
+                                                <?= esc($orden['nombres']) ?> <?= esc($orden['apellidos']) ?>
                                             </div>
                                         </td>
                                         <td>
@@ -177,10 +165,16 @@
     $(document).ready(function () {
         // Inicializar DataTables con ordenamiento por la primera columna (ID) descendente
         $('#ordenes-datatables').DataTable({
-            "order": [[0, "desc"]], // Ordenar por #Orden descendente
+            scrollX: true,
             language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
+                url: 'https://cdn.datatables.net/plug-ins/2.3.6/i18n/es-ES.json',
             },
+            order: [[1, 'desc']],
+            layout: {
+                topStart: {
+                    buttons: ['pageLength','copy', 'excel', 'pdf', 'colvis']
+                }
+            }
         });
 
         // Manejo de eliminación con SweetAlert2

@@ -99,14 +99,14 @@
                 experiencia.
               </p>
               <div class="flex gap-4 pt-4">
-                <button
+                <a href="<?= base_url('auth/login') ?>"
                   class="px-8 py-4 rounded-full border-2 border-white text-white font-semibold hover:bg-white hover:text-black transition-all duration-300">
-                  AGENDAR
-                </button>
-                <button
+                  INGRESAR ORDEN
+                </a>
+                <a href="<?= base_url('consulta/mis-ordenes') ?>"
                   class="px-8 py-4 rounded-full bg-brand-500 text-black font-semibold hover:bg-brand-400 transition-all duration-300">
-                  COTIZAR
-                </button>
+                  CONSULTAR ORDEN
+                </a>
               </div>
             </div>
           </div>

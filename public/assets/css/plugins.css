@@ -3189,7 +3189,7 @@
   margin-bottom: 20px !important; }
 
 /*      Datatable     */
-table.dataTable {
+/* table.dataTable {
   clear: both;
   margin-top: 15px !important;
   margin-bottom: 15px !important;
@@ -3314,7 +3314,7 @@ div.table-responsive > div.dataTables_wrapper > div.row {
   margin: 0; }
   div.table-responsive > div.dataTables_wrapper > div.row > div[class^="col-"]:first-child, div.table-responsive > div.dataTables_wrapper > div.row > div[class^="col-"]:last-child {
     padding-left: 0;
-    padding-right: 0; }
+    padding-right: 0; } */
 
 svg {
   -ms-touch-action: none;

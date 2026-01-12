@@ -27,50 +27,6 @@
             margin-bottom: 8px;
         }
 
-        .header-row {
-            display: table-row;
-        }
-
-        .h-logo {
-            display: table-cell;
-            width: 33%;
-            padding: 5px;
-            text-align: left;
-            vertical-align: middle;
-        }
-
-        .h-logo img {
-            max-width: 100px;
-            max-height: 100px;
-        }
-
-        .h-empresa {
-            display: table-cell;
-            width: 34%;
-            padding: 5px 10px;
-            text-align: center;
-            vertical-align: middle;
-        }
-
-        .h-empresa strong {
-            font-size: 12px;
-            display: block;
-            margin-bottom: 2px;
-        }
-
-        .h-empresa div {
-            font-size: 8px;
-            line-height: 1.3;
-        }
-
-        .h-orden {
-            display: table-cell;
-            width: 33%;
-            padding: 5px;
-            text-align: right;
-            vertical-align: middle;
-        }
-
         .h-orden-title {
             font-size: 11px;
             font-weight: bold;
@@ -82,20 +38,6 @@
             font-weight: bold;
             color: #c00;
             margin-bottom: 3px;
-        }
-
-        .h-qr {
-            display: inline-block;
-        }
-
-        .h-qr img {
-            width: 50px;
-            height: 50px;
-        }
-
-        .h-qr-label {
-            font-size: 7px;
-            color: #666;
         }
 
         /* LAYOUT PRINCIPAL */
@@ -156,7 +98,7 @@
         }
 
         .cliente-tabla .valor {
-            border-bottom: 1px solid #000;
+            /* border-bottom: 1px solid #000; */
             padding: 0 3px;
         }
 
@@ -215,6 +157,58 @@
 
         .tabla-checks td.check-col {
             width: 3%;
+        }
+
+        .tabla-header {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+            font-size: 7.5px;
+        }
+
+        .tabla-header th {
+            /* background: #e8e8e8; */
+            /* border: 1px solid #999; */
+            padding: 0;
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .tabla-header td {
+            /* border: 1px solid #ccc; */
+            padding: 1px;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+
+        .tabla-header td.item-header {
+            text-align: left;
+            padding-left: 4px;
+            font-weight: normal;
+            width: 33%;
+        }
+
+        .tabla-header td.item-header img {
+            max-width: 100px;
+            max-height: 100px;
+        }
+
+        .tabla-header td.item-center {
+            font-size: medium;
+            text-align: center;
+            font-weight: bold;
+            width: 33%;
+        }
+
+        .tabla-header td.check-header {
+            width: 17%;
+        }
+
+        .tabla-header td.check-right {
+            width: 17%;
+            text-align: right;
         }
 
         /* Checkbox mejorado para PDF */
@@ -370,7 +364,55 @@
 <body>
     <!-- ENCABEZADO -->
     <div class="header">
-        <div class="header-row">
+
+
+        <table class="tabla-header">
+            <thead>
+                <tr>
+                    <!-- <th style="width: 19%; text-align: left; padding-left: 4px;"></th>
+                    <th style="width: 19%; text-align: left; padding-left: 4px;"></th>
+                    <th style="width: 19%; text-align: left; padding-left: 4px;"></th>
+                    <th style="width: 3%;">SÍ</th> -->
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="item-header">
+                        <img src="https://static.vecteezy.com/system/resources/thumbnails/038/600/554/small_2x/adobe-photoshop-logos-adobe-icons-abstract-art-free-vector.jpg"
+                            alt="Logo">
+                    </td>
+
+                    <td class="item-center">
+                        <strong>
+                            <?= strtoupper($nombre_empresa) ?>
+                        </strong>
+                        <div>
+                            Dirección: <?= $direccion_empresa ?><br>
+                            Email:
+                            <?= $email_empresa ?><br>
+                            Telf:
+                            <?= $telefono_empresa ?>
+                        </div>
+                    </td>
+
+                    <td class="check-header">
+                        <div class="h-orden-title">ORDEN DE TRABAJO</div>
+                        <div class="h-orden-codigo">
+                            <?= $orden['codigo_orden'] ?>
+                        </div>
+                    </td>
+                    <td class="check-right">
+                        <div>
+                            <img style="width: 100px; height: 100px;" src="<?= $qr_code ?>" alt="QR">
+                            <div>Seguimiento</div>
+                        </div>
+                    </td>
+
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- <div class="header-row">
             <div class="h-logo">
                 <img src="" alt="Logo">
             </div>
@@ -390,7 +432,7 @@
                     <div class="h-qr-label">Seguimiento</div>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 
     <!-- CONTENIDO -->
@@ -404,7 +446,10 @@
                     <table class="cliente-tabla">
                         <tr>
                             <td class="label">Cliente:</td>
-                            <td class="valor" colspan="3"><?= $orden['nombres'] ?> <?= $orden['apellidos'] ?></td>
+                            <td class="valor" style="width: 35%;"><?= $orden['nombres'] ?> <?= $orden['apellidos'] ?>
+                            </td>
+                            <td class="label" style="width: 15%;">Fecha de ingreso:</td>
+                            <td class="valor" style="width: 35%;"><?=formatear_fecha($orden['created_at']) ?></td>
                         </tr>
                         <tr>
                             <td class="label">Cédula:</td>
@@ -415,8 +460,8 @@
                         <tr>
                             <td class="label">Email:</td>
                             <td class="valor"><?= $orden['email'] ?></td>
-                            <td class="label">Fecha:</td>
-                            <td class="valor"><?= date('d/m/Y H:i', strtotime($orden['created_at'])) ?></td>
+                            <!-- <td class="label">Fecha de entrega:</td>
+                            <td class="valor"></td> -->
                         </tr>
                     </table>
                 </div>

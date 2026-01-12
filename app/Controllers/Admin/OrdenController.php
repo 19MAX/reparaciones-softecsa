@@ -35,12 +35,12 @@ class OrdenController extends BaseController
         // Construimos la consulta
         $builder = $db->table('ordenes_trabajo as o');
         $builder->select('
-            o.*, 
-            c.nombres, 
-            c.apellidos, 
+            o.*,
+            c.nombres,
+            c.apellidos,
             u.nombre as prioridad,
             u.recargo,
-            (SELECT GROUP_CONCAT(CONCAT(tipo, " ", marca, " ", modelo) SEPARATOR ", ") 
+            (SELECT GROUP_CONCAT(CONCAT(tipo, " ", marca, " ", modelo) SEPARATOR ", ")
              FROM dispositivos d WHERE d.orden_id = o.id) as equipos_resumen
         ');
 

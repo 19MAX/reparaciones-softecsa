@@ -275,8 +275,8 @@
         </div>
     </div>
 </div>
-<!-- Eliminar Usuario -->
 
+<!-- Eliminar Usuario -->
 <div class="modal fade" id="deleteUserModal" tabindex="-1" role="dialog" aria-labelledby="deleteUserModal"
     aria-hidden="true">
     <div class="modal-dialog modal-danger modal-dialog-centered modal-" role="document">

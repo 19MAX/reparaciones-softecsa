@@ -238,11 +238,11 @@
                                 <a class="dropdown-toggle profile-pic" data-bs-toggle="dropdown" href="#"
                                     aria-expanded="false">
                                     <div class="avatar-sm">
-                                        <img src="<?= base_url('assets') ?>/img/profile.jpg" alt="..."
+                                        <img src="<?= base_url('assets') ?>/image/profile.jpg" alt="..."
                                             class="avatar-img rounded-circle">
                                     </div>
                                     <span class="profile-username">
-                                        <span class="op-7">Hi,</span> <span class="fw-bold">Hizrian</span>
+                                        <span class="op-7">Hola,</span> <span class="fw-bold"><?=session('nombres')?></span>
                                     </span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-user animated fadeIn">
@@ -253,8 +253,7 @@
                                                         src="<?= base_url('assets') ?>/img/profile.jpg"
                                                         alt="image profile" class="avatar-img rounded"></div>
                                                 <div class="u-text">
-                                                    <h4>Hizrian</h4>
-                                                    <p class="text-muted">hello@example.com</p><a href="profile.html"
+                                                    <h4><?=session('nombres')?></h4><a href="profile.html"
                                                         class="btn btn-xs btn-secondary btn-sm">View Profile</a>
                                                 </div>
                                             </div>
@@ -267,7 +266,7 @@
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item" href="#">Account Setting</a>
                                             <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="#">Logout</a>
+                                            <a class="dropdown-item" href="<?=base_url('auth/logout')?>">Cerrar Sesión</a>
                                         </li>
                                     </div>
                                 </ul>
