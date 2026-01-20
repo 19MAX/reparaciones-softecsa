@@ -47,26 +47,6 @@ class CrearTablaOrdenesTrabajo extends Migration
                 'constraint' => '10,2',
                 'default' => 0
             ],
-            'valor_revision' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0,
-            ],
-            'mano_obra_aproximado' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0,
-            ],
-            'repuestos_aproximado' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0,
-            ],
-            'total' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0,
-            ],
             'abono' => [
                 'type' => 'DECIMAL',
                 'constraint' => '10,2',

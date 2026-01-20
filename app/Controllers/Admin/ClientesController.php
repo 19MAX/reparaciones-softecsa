@@ -69,6 +69,18 @@ class ClientesController extends BaseController
 
             if ($persona && $persona['success'] && isset($persona['data'])) {
                 $d = $persona['data'];
+                // 🔹 Crear cliente en BD local
+                $nuevoCliente = [
+                    'cedula' => $d['identification'],
+                    'nombres' => $d['name'],
+                    'apellidos' => $d['surname'],
+                    'email' => $d['email'] ?? '',
+                    'telefono' => $d['phone'] ?? '',
+                    'telefono_secundario' => null,
+                    'created_at' => date('Y-m-d H:i:s')
+                ];
+
+                $idCliente = $this->clienteModel->insert($nuevoCliente);
                 return $this->response->setHeader('X-CSRF-TOKEN', $newCsrfToken)
                     ->setJSON([
                         'status' => 'success',
@@ -76,7 +88,7 @@ class ClientesController extends BaseController
                         'code' => 200,
                         'origin' => 'api',
                         'persona' => [
-                            'id' => '', // ID vacío porque es nuevo en tu sistema
+                            'id' => $idCliente, // ID vacío porque es nuevo en tu sistema
                             'cedula' => $d['identification'], // Asegurar devolver la cédula
                             'nombres' => $d['name'],
                             'apellidos' => $d['surname'],
@@ -203,12 +215,12 @@ class ClientesController extends BaseController
 
         try {
             $json = $this->request->getJSON(true);
-            
+
             // Validar que venga el ID
             if (empty($json['id'])) {
                 return $this->response->setJSON([
                     'status' => 'error',
-                    'token'  => csrf_hash(),
+                    'token' => csrf_hash(),
                     'errors' => 'ID de cliente no identificado.'
                 ]);
             }
@@ -221,7 +233,7 @@ class ClientesController extends BaseController
                     'label' => 'Cédula',
                     // IMPORTANTE: is_unique[tabla.campo,columna_id,valor_id]
                     // Esto le dice a CI4: "Verifica que sea única, EXCEPTO para el ID actual"
-                    'rules' => "required|max_length[20]|is_unique[clientes.cedula,id,{$id}]", 
+                    'rules' => "required|max_length[20]|is_unique[clientes.cedula,id,{$id}]",
                     'errors' => [
                         'is_unique' => 'Esta cédula ya pertenece a otro cliente.'
                     ]
@@ -239,19 +251,19 @@ class ClientesController extends BaseController
             if (!$validation->run($json)) {
                 return $this->response->setJSON([
                     'status' => 'error',
-                    'token'  => csrf_hash(),
+                    'token' => csrf_hash(),
                     'errors' => $validation->getErrors()
                 ]);
             }
 
             // Preparar datos para actualizar
             $clienteData = [
-                'cedula'              => $json['cedula'],
-                'nombres'             => $json['nombres'],
-                'apellidos'           => $json['apellidos'],
-                'telefono'            => $json['telefono'] ?? null,
+                'cedula' => $json['cedula'],
+                'nombres' => $json['nombres'],
+                'apellidos' => $json['apellidos'],
+                'telefono' => $json['telefono'] ?? null,
                 'telefono_secundario' => $json['telefono_secundario'] ?? null,
-                'email'               => $json['email'] ?? null,
+                'email' => $json['email'] ?? null,
                 'updated_at' => date('Y-m-d H:i:s'), // O dejar que el modelo lo maneje
             ];
 
@@ -262,9 +274,9 @@ class ClientesController extends BaseController
             $clienteActualizado = $this->clienteModel->find($id);
 
             return $this->response->setJSON([
-                'status'      => 'success',
-                'token'       => csrf_hash(),
-                'msg'         => 'Datos actualizados correctamente',
+                'status' => 'success',
+                'token' => csrf_hash(),
+                'msg' => 'Datos actualizados correctamente',
                 'client_data' => $clienteActualizado
             ]);
 
@@ -272,7 +284,7 @@ class ClientesController extends BaseController
             log_message('error', '[ClientesController::actualizarJs] ' . $e->getMessage());
             return $this->response->setJSON([
                 'status' => 'error',
-                'token'  => csrf_hash(),
+                'token' => csrf_hash(),
                 'errors' => 'Error del sistema: ' . $e->getMessage()
             ]);
         }

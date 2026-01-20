@@ -17,15 +17,21 @@ use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
-use PhpParser\Node\Expr\Print_;
 class OrdenController extends BaseController
 {
 
     public $configuracionModel;
+    protected $urgenciaModel;
+    protected $usuarioModel;
+    protected $tipoDispositivoModel;
+
 
     public function __construct()
     {
         $this->configuracionModel = new ConfiguracionModel();
+        $this->urgenciaModel = new \App\Models\UrgenciaModel();
+        $this->usuarioModel = new \App\Models\UsuarioModel();
+        $this->tipoDispositivoModel = new \App\Models\TipoDispositivoModel();
     }
 
     public function index()
@@ -61,23 +67,14 @@ class OrdenController extends BaseController
 
     public function crear()
     {
-        // 1. Instanciamos los modelos necesarios
-        $urgenciaModel = new \App\Models\UrgenciaModel();
-        $usuarioModel = new \App\Models\UsuarioModel();
-        $checklistModel = new \App\Models\ChecklistItemModel(); // <--- AGREGAR ESTO
-
-        // 2. Preparamos los datos
         $data = [
             'titulo' => 'Nueva Orden de Trabajo',
-
-            // Traemos las urgencias activas
-            'urgencias' => $urgenciaModel->where('activo', 1)->findAll(),
-
-            // Traemos los técnicos activos
-            'tecnicos' => $usuarioModel->where('role', 'tecnico')->where('estado', 'activo')->findAll(),
+            'urgencias' => $this->urgenciaModel->where('activo', 1)->findAll(),
+            'tecnicos' => $this->usuarioModel->where('role', 'tecnico')->where('estado', 'activo')->findAll(),
+            'tiposDispositivos' => $this->tipoDispositivoModel->where('activo', 1)->findAll(),
 
             // Traemos los items del checklist activos para dibujarlos en la vista
-            'checklist_items' => $checklistModel->where('activo', 1)->findAll(), // <--- AGREGAR ESTO
+            // 'checklist_items' => $checklistModel->where('activo', 1)->findAll()
         ];
 
         return view('admin/ordenes/crear', $data);
@@ -93,6 +90,11 @@ class OrdenController extends BaseController
             // Si no hay sesión, redirigir al login o mostrar error
             return redirect()->to(base_url('login'))->with('mensaje', 'Tu sesión ha expirado.');
         }
+
+        // DEBUG
+        // $valores = $this->request->getPost();
+        // var_dump($valores);
+        // exit;
 
         try {
             // 2. Obtener datos del formulario
@@ -133,6 +135,11 @@ class OrdenController extends BaseController
                 'devices' => [
                     'label' => 'Dispositivos',
                     'rules' => 'required', // Validamos manualmente que sea array después
+                ],
+                // Validamos que SI se envía un técnico en un dispositivo, este exista
+                'devices.*.tecnico_id' => [
+                    'label' => 'Técnico del dispositivo',
+                    'rules' => 'permit_empty|is_not_unique[usuarios.id]',
                 ]
             ];
 
@@ -159,7 +166,7 @@ class OrdenController extends BaseController
             $ordenModel = new \App\Models\OrdenTrabajoModel();
             $dispositivoModel = new \App\Models\DispositivoModel();
             $checklistRelModel = new \App\Models\ChecklistDispositivoModel();
-
+            $historialModel = new \App\Models\HistorialDispositivoModel();
             // A. Insertar Orden
             $codigoOrden = 'ORD-' . date('Y') . '-' . strtoupper(substr(uniqid(), -5));
 
@@ -167,7 +174,7 @@ class OrdenController extends BaseController
                 'codigo_orden' => $codigoOrden,
                 'cliente_id' => $clienteId,
                 'usuario_id' => $usuarioId, // Aquí usamos la variable validada al inicio
-                'tecnico_id' => $tecnicoId ?: null,
+                'tecnico_id' => null,
                 'urgencia_id' => $urgenciaId ?: null,
                 'estado' => 'abierta',
                 'created_at' => date('Y-m-d H:i:s'),
@@ -182,16 +189,6 @@ class OrdenController extends BaseController
             $ordenModel->insert($ordenData);
             $ordenId = $ordenModel->getInsertID();
 
-            // B. Snapshot de Términos y Condiciones
-            // $terminosActivos = $terminosModel->where('activo', 1)->findAll();
-            // foreach ($terminosActivos as $idx => $term) {
-            //     $ordenTerminosModel->insert([
-            //         'orden_id' => $ordenId,
-            //         'termino_id' => $term['id'],
-            //         'orden' => $idx + 1
-            //     ]);
-            // }
-
             // C. Insertar Dispositivos (Loop)
             foreach ($devices as $dev) {
                 // Lógica Pass/Patrón
@@ -203,10 +200,13 @@ class OrdenController extends BaseController
                 } elseif (in_array($tipoPass, ['contrasena', 'pin'])) {
                     $passwordFinal = $dev['pass_code'] ?? '';
                 }
+                // Obtener el técnico específico de este dispositivo
+                $tecnicoDispositivo = !empty($dev['tecnico_id']) ? $dev['tecnico_id'] : null;
 
                 $dispositivoInsert = [
                     'orden_id' => $ordenId,
-                    'tipo' => $dev['tipo'],
+                    'tipo_dispositivo_id' => $dev['tipo_dispositivo_id'] ?? null,
+                    'tecnico_id' => $tecnicoDispositivo, // <--- AQUÍ SE GUARDA AHORA
                     'marca' => $dev['marca'],
                     'modelo' => $dev['modelo'],
                     'serie_imei' => $dev['serie_imei'] ?? null,
@@ -214,23 +214,33 @@ class OrdenController extends BaseController
                     'tipo_pass' => $tipoPass,
                     'pass_code' => $passwordFinal,
                     'estado_reparacion' => 'Dispositivo recibido e ingresado',
+                    'observaciones' => $dev['observaciones'] ?? null,
                     'created_at' => date('Y-m-d H:i:s')
                 ];
 
                 $dispositivoModel->insert($dispositivoInsert);
                 $dispositivoId = $dispositivoModel->getInsertID();
+                // C. Crear Historial Inicial (IMPORTANTE PARA TUS MÉTRICAS)
+                $historialModel->insert([
+                    'dispositivo_id' => $dispositivoId,
+                    'usuario_id' => $usuarioId, // Quien recibe el equipo (Recepcionista)
+                    'estado_anterior' => null,
+                    'estado_nuevo' => 'recibida',
+                    'comentario' => 'Ingreso del equipo a taller. ' . ($tecnicoDispositivo ? 'Asignado a técnico.' : 'Sin asignar.'),
+                    'created_at' => date('Y-m-d H:i:s')
+                ]);
 
                 // D. Insertar Checklist del dispositivo actual
-                if (isset($dev['checklist']) && is_array($dev['checklist'])) {
-                    foreach ($dev['checklist'] as $checkId) {
-                        $checklistRelModel->insert([
-                            'dispositivo_id' => $dispositivoId,
-                            'checklist_item_id' => $checkId,
-                            'estado' => 1,
-                            'observacion' => null
-                        ]);
-                    }
-                }
+                // if (isset($dev['checklist']) && is_array($dev['checklist'])) {
+                //     foreach ($dev['checklist'] as $checkId) {
+                //         $checklistRelModel->insert([
+                //             'dispositivo_id' => $dispositivoId,
+                //             'checklist_item_id' => $checkId,
+                //             'estado' => 1,
+                //             'observacion' => null
+                //         ]);
+                //     }
+                // }
             }
 
             $db->transComplete();
@@ -252,9 +262,15 @@ class OrdenController extends BaseController
     }
     public function imprimir($id)
     {
-        // 1. OBTENER DATOS DE LA BD
+        // 1. CARGAR MODELOS
         $ordenModel = new OrdenTrabajoModel();
-        $orden = $ordenModel->select('ordenes_trabajo.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula,u.nombre as nombre_urgencia')
+        $dispositivoModel = new DispositivoModel(); // Asegúrate de tener este modelo
+        $urgenciaModel = new \App\Models\UrgenciaModel();
+        $configuracionModel = new ConfiguracionModel();
+        $terminosModel = new \App\Models\TerminosCondicionesModel(); // <--- NUEVO
+
+        // 2. OBTENER DATOS DE LA ORDEN
+        $orden = $ordenModel->select('ordenes_trabajo.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula, u.nombre as nombre_urgencia')
             ->join('clientes as c', 'c.id = ordenes_trabajo.cliente_id')
             ->join('urgencias as u', 'u.id = ordenes_trabajo.urgencia_id', 'left')
             ->where('ordenes_trabajo.id', $id)
@@ -264,84 +280,92 @@ class OrdenController extends BaseController
             return redirect()->back()->with('error', 'Orden no encontrada');
         }
 
-        $urgenciaModel = new \App\Models\UrgenciaModel();
-        // Sugerencia: Ordenarlas por recargo ASC o ID para que salgan ordenadas (Baja, Media, Alta)
         $urgencias = $urgenciaModel->where('activo', 1)->orderBy('recargo', 'ASC')->findAll();
 
-        $dispositivoModel = new DispositivoModel();
-        $dispositivos = $dispositivoModel->where('orden_id', $id)->findAll();
+        // 3. OBTENER DISPOSITIVOS
+        $dispositivos = $dispositivoModel->select('dispositivos.*, td.nombre as nombre_tipo, td.icono')
+            ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left')
+            ->where('orden_id', $id)
+            ->findAll();
 
-        // 2. GENERAR EL QR (SINTAXIS v5 CONFIRMADA)
-        // La URL que el cliente escaneará para ver el estado
+        // ---------------------------------------------------------
+        // LOGICA DE TÉRMINOS Y CONDICIONES ACUMULATIVOS
+        // ---------------------------------------------------------
+
+        // A. Extraemos los IDs de los tipos de dispositivo presentes en la orden
+        // Ejemplo: Si hay 2 celulares y 1 laptop, esto devuelve [1, 2] (sin repetir)
+        $tiposIds = [];
+        foreach ($dispositivos as $disp) {
+            // Asumo que agregaste la columna 'tipo_dispositivo_id' en la tabla dispositivos
+            // Si tu columna se llama diferente, cámbialo aquí.
+            if (!empty($disp['tipo_dispositivo_id'])) {
+                $tiposIds[] = $disp['tipo_dispositivo_id'];
+            }
+        }
+        $tiposIds = array_unique($tiposIds); // Eliminar duplicados de IDs
+
+        // B. Construimos la consulta "Inteligente"
+        // Queremos: (Activos) Y (Sean Generales O Sean de los Tipos encontrados)
+        $builder = $terminosModel->builder();
+        $builder->where('activo', 1);
+
+        $builder->groupStart();
+        $builder->where('tipo_dispositivo_id', null); // Términos Generales
+
+        if (!empty($tiposIds)) {
+            $builder->orWhereIn('tipo_dispositivo_id', $tiposIds); // Términos específicos
+        }
+        $builder->groupEnd();
+
+        // ORDEN: primero generales (NULL), luego específicos
+        $builder->orderBy('tipo_dispositivo_id IS NOT NULL', 'ASC', false);
+        $terminos = $builder->get()->getResultArray();
+
+        // ---------------------------------------------------------
+
+        // 4. GENERAR EL QR
         $urlSeguimiento = base_url("consulta/orden/" . $orden['codigo_orden']);
-
-        $builder = new Builder(
+        $builderQr = new Builder(
             writer: new PngWriter(),
             writerOptions: [],
             validateResult: false,
-            data: $urlSeguimiento, // El contenido del QR
+            data: $urlSeguimiento,
             encoding: new Encoding('UTF-8'),
-            // errorCorrectionLevel: ErrorCorrectionLevel::High, // Enum
-            size: 100, // Tamaño pequeño para que entre en la cabecera
-            margin: 0, // Sin margen extra para aprovechar espacio
-            roundBlockSizeMode: RoundBlockSizeMode::Margin
+            size: 100,
+            margin: 0
         );
+        $qrCodeBase64 = $builderQr->build()->getDataUri();
 
-        $result = $builder->build();
+        // 5. CONFIGURACIÓN EMPRESA
+        $configuracion = $configuracionModel->first();
+        $rutaLogo = FCPATH . 'assets/img/logo.png'; // Ajusta si es necesario
 
-        // El QR sí necesitamos convertirlo a Base64 porque se genera en memoria "al vuelo"
-        $qrCodeBase64 = $result->getDataUri();
-
-        // 3. DATOS DEL NEGOCIO
-
-        $configuracion = $this->configuracionModel->first();
-
-
-
-        // Asegúrate de que esta ruta sea correcta en tu servidor
-        $rutaLogo = FCPATH . 'assets/img/logo.png';
-
-        // Validación opcional para evitar errores si la imagen no existe
-        if (!file_exists($rutaLogo)) {
-            // Si no existe, puedes poner null o una imagen por defecto
-            // log_message('error', 'Logo no encontrado en: ' . $rutaLogo);
-        }
-
-        // 4. PREPARAR DATOS PARA LA VISTA
+        // 6. PREPARAR DATOS VISTA
         $data = [
             'orden' => $orden,
             'urgencias' => $urgencias,
             'dispositivos' => $dispositivos,
-            'qr_code' => $qrCodeBase64, // String Base64 para el <img src>
-            'logo_path' => $configuracion['logo_path'] ?? "",     // Ruta física para que Dompdf la lea
+            'qr_code' => $qrCodeBase64,
+            'logo_path' => $configuracion['logo_path'] ?? "",
             'nombre_empresa' => $configuracion['nombre_empresa'] ?? 'Mi Empresa',
-            'telefono_empresa' => $configuracion['telefono'] ?? '000-000-0000',
+            'telefono_empresa' => $configuracion['telefono'] ?? '',
             'direccion_empresa' => $configuracion['direccion'] ?? '',
-            'email_empresa' => $configuracion['email'] ?? '',
+            'email_empresa' => isset($configuracion['email']) ? $configuracion['email'] : '', // Validación extra
+            'terminos' => $terminos // <--- PASAMOS LOS TÉRMINOS FILTRADOS
         ];
 
-        // var_dump($data);
-        // exit;
-
-        // 5. CONFIGURAR DOMPDF
+        // 7. RENDERIZAR PDF
         $options = new Options();
         $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
-        // Permitir acceso a la carpeta public (importante para el logo físico)
         $options->set('chroot', FCPATH);
 
         $dompdf = new Dompdf($options);
-
         $html = view('admin/ordenes/pdf_template', $data);
-
         $dompdf->loadHtml($html);
-
-        // Formato Horizontal (Landscape) - A4 o Letter
-        $dompdf->setPaper('A4', 'landscape');
-
+        $dompdf->setPaper('A4', 'landscape'); // O 'portrait' si prefieres vertical
         $dompdf->render();
 
-        // Descargar o mostrar en navegador
         return $dompdf->stream("Orden_" . $orden['codigo_orden'] . ".pdf", ["Attachment" => false]);
     }
 }

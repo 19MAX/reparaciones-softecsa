@@ -63,6 +63,35 @@
                     </a>
                 </li>
 
+                <li class="nav-item  <?= current_url() == base_url('admin/historial') ? 'active' : '' ?>">
+                    <a href="<?= base_url('admin/historial') ?>">
+                        <i class="fas fa-clock"></i>
+                        <p>Historial</p>
+                        <!-- <span class="badge badge-secondary">1</span> -->
+                    </a>
+                </li>
+                <li class="nav-item  <?= current_url() == base_url('admin/urgencias') ? 'active' : '' ?>">
+                    <a href="<?= base_url('admin/urgencias') ?>">
+                        <i class="fas fa-bolt"></i>
+                        <p>Urgencias</p>
+                        <!-- <span class="badge badge-secondary">1</span> -->
+                    </a>
+                </li>
+                <li class="nav-item  <?= current_url() == base_url('admin/tipos-dispositivos') ? 'active' : '' ?>">
+                    <a href="<?= base_url('admin/tipos-dispositivos') ?>">
+                        <i class="fas fa-laptop"></i>
+                        <p>Tipos de dispositivos</p>
+                        <!-- <span class="badge badge-secondary">1</span> -->
+                    </a>
+                </li>
+                <li class="nav-item  <?= current_url() == base_url('admin/terminos-condiciones') ? 'active' : '' ?>">
+                    <a href="<?= base_url('admin/terminos-condiciones') ?>">
+                        <i class="fas fa-gavel"></i>
+                        <p>Términos y condiciones</p>
+                        <!-- <span class="badge badge-secondary">1</span> -->
+                    </a>
+                </li>
+
                 <!-- <li class="nav-item">
                     <a data-bs-toggle="collapse" href="#submenu">
                         <i class="fas fa-toolbox"></i>

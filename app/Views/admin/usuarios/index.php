@@ -82,7 +82,9 @@
                                                     data-nombres-user="<?= $usuario['nombres'] ?>"
                                                     data-apellidos-user="<?= $usuario['apellidos'] ?>"
                                                     data-role-user="<?= $usuario['role'] ?>"
-                                                    data-estado-user="<?= $usuario['estado'] ?>" type="button"
+                                                    data-estado-user="<?= $usuario['estado'] ?>"
+                                                    data-tipo-comision="<?= $usuario['tipo_comision'] ?>"
+                                                    data-valor-comision="<?= $usuario['valor_comision'] ?>" type="button"
                                                     title="Actualizar usuario" class="btn btn-link btn-primary btn-lg btn-edit"
                                                     data-bs-toggle="modal" title="Editar usuario"
                                                     data-bs-target="#editUserModal">
@@ -180,6 +182,24 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row comision-container" style="display: none;">
+                            <div class="col">
+                                <div class="form-floating form-floating-custom mb-3">
+                                    <select class="form-select" id="add-tipo-comision" name="tipo_comision">
+                                        <option value="porcentaje">Porcentaje (%)</option>
+                                        <option value="fijo">Monto Fijo ($)</option>
+                                    </select>
+                                    <label for="add-tipo-comision">Tipo Comisión</label>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-floating form-floating-custom mb-3">
+                                    <input type="number" step="0.01" class="form-control" id="add-valor-comision"
+                                        name="valor_comision" placeholder="0.00" />
+                                    <label for="add-valor-comision">Valor Comisión</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -263,6 +283,24 @@
                             <input type="hidden" name="id_usuario" id="edit-id" value="" />
 
                         </div>
+                        <div class="row comision-container" style="display: none;">
+                            <div class="col">
+                                <div class="form-floating form-floating-custom mb-3">
+                                    <select class="form-select" id="edit-tipo-comision" name="tipo_comision">
+                                        <option value="porcentaje">Porcentaje (%)</option>
+                                        <option value="fijo">Monto Fijo ($)</option>
+                                    </select>
+                                    <label for="edit-tipo-comision">Tipo Comisión</label>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-floating form-floating-custom mb-3">
+                                    <input type="number" step="0.01" class="form-control" id="edit-valor-comision"
+                                        name="valor_comision" placeholder="0.00" />
+                                    <label for="edit-valor-comision">Valor Comisión</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -322,6 +360,29 @@
         // Inicializar DataTables
         $('#basic-datatables').DataTable();
 
+        // Función para mostrar/ocultar campos de comisión
+        function toggleComisionFields(role, container) {
+            if (role === 'tecnico') {
+                container.slideDown();
+                container.find('input, select').prop('required', true); // Hacer requeridos si es técnico
+            } else {
+                container.slideUp();
+                container.find('input, select').prop('required', false); // Quitar requerido
+                container.find('input').val(''); // Limpiar valor
+            }
+        }
+
+        // Evento cambio de rol en Crear
+        $('#add-role').on('change', function() {
+            toggleComisionFields($(this).val(), $('#addUserModal .comision-container'));
+        });
+
+        // Evento cambio de rol en Editar
+        $('#edit-role').on('change', function() {
+            toggleComisionFields($(this).val(), $('#editUserModal .comision-container'));
+        });
+
+        // Lógica del botón Editar
         $('body').on('click', '.btn-edit', function () {
             let id = $(this).data('user-id');
             let cedula = $(this).data('cedula-user');
@@ -329,10 +390,20 @@
             let apellidos = $(this).data('apellidos-user');
             let role = $(this).data('role-user');
 
+            // Datos nuevos de comisión
+            let tipoComision = $(this).data('tipo-comision');
+            let valorComision = $(this).data('valor-comision');
+
             $('#edit-id').val(id);
             $('#edit-cedula').val(cedula);
             $('#edit-nombres').val(nombres);
             $('#edit-apellidos').val(apellidos);
+
+            // Cargar datos de comisión
+            $('#edit-tipo-comision').val(tipoComision || 'porcentaje');
+            $('#edit-valor-comision').val(valorComision);
+
+            // Establecer el rol y disparar el evento change para mostrar/ocultar campos
             $('#edit-role').val(role).change();
 
             $('#edit-password').val('');

@@ -35,6 +35,11 @@ class UsuariosController extends BaseController
             $nombres = $this->request->getPost('nombres');
             $apellidos = $this->request->getPost('apellidos');
             $role = $this->request->getPost('role');
+
+            // Nuevos inputs
+            $tipoComision = $this->request->getPost('tipo_comision');
+            $valorComision = $this->request->getPost('valor_comision');
+
             $password = $this->request->getPost('password');
             $repeatPassword = $this->request->getPost('repeatPassword');
 
@@ -46,6 +51,8 @@ class UsuariosController extends BaseController
                 'password' => $password,
                 'role' => $role,
                 'repeatPassword' => $repeatPassword,
+                'tipo_comision' => $tipoComision,
+                'valor_comision' => $valorComision,
             ];
 
             $validation = \Config\Services::validation();
@@ -78,6 +85,13 @@ class UsuariosController extends BaseController
                 ],
             ];
 
+            if ($role === 'tecnico') {
+                $rules['valor_comision'] = [
+                    'label' => 'Valor de Comisión',
+                    'rules' => 'required|numeric|greater_than_equal_to[0]'
+                ];
+            }
+
             $validation->setRules($rules);
 
             // Ejecutar la validación
@@ -92,6 +106,9 @@ class UsuariosController extends BaseController
                 'apellidos' => $apellidos,
                 'password' => $password,
                 'role' => $role,
+                // Agregamos lógica para guardar NULL si no es técnico
+                'tipo_comision' => ($role === 'tecnico') ? $tipoComision : null,
+                'valor_comision' => ($role === 'tecnico') ? $valorComision : 0.00,
                 'estado' => 'activo',
                 'created_at' => date('Y-m-d H:i:s'),
                 'created_by' => session()->get('id_usuario'),
@@ -115,12 +132,15 @@ class UsuariosController extends BaseController
     {
         try {
             $idUsuario = $this->request->getPost('id_usuario');
-
+            $role = $this->request->getPost('role'); // Obtener el rol
             $usuarioData = [
                 'cedula' => $this->request->getPost('cedula'),
                 'nombres' => $this->request->getPost('nombres'),
                 'apellidos' => $this->request->getPost('apellidos'),
-                'role' => $this->request->getPost('role'),
+                'role' => $role,
+                // Actualizar lógica de comisión
+                'tipo_comision' => ($role === 'tecnico') ? $this->request->getPost('tipo_comision') : null,
+                'valor_comision' => ($role === 'tecnico') ? $this->request->getPost('valor_comision') : 0.00,
                 'updated_at' => date('Y-m-d H:i:s'),
                 'updated_by' => session()->get('id_usuario'),
             ];
@@ -170,7 +190,13 @@ class UsuariosController extends BaseController
 
                 $usuarioData['repeatPassword'] = $repeatPassword;
             }
-
+            // Agregar validación condicional si es técnico
+            if ($role === 'tecnico') {
+                $rules['valor_comision'] = [
+                    'label' => 'Valor de Comisión',
+                    'rules' => 'required|numeric|greater_than_equal_to[0]'
+                ];
+            }
             $validation = \Config\Services::validation();
             $validation->setRules($rules);
 

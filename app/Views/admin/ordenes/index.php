@@ -32,7 +32,7 @@
         <div class="card">
             <div class="card-header">
                 <div class="d-flex align-items-center">
-                    <h4 class="card-title"><i class="fas fa-clipboard-list me-2"></i>Listado de Órdenes</h4>
+                    <h4 class="card-title"><i class="fas fa-toolbox me-2"></i>Listado de Órdenes</h4>
 
                     <a href="<?= base_url('admin/ordenes/crear') ?>" class="btn btn-success btn-round ms-auto">
                         <i class="fa fa-plus me-2"></i> Nueva Orden
@@ -54,7 +54,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (!empty($ordenes) && is_array($ordenes)): ?>
+
+                            <?php if (!empty($ordenes)): ?>
                                 <?php foreach ($ordenes as $orden): ?>
                                     <tr>
                                         <td class="fw-bold text-primary">
@@ -141,13 +142,7 @@
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
-                                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-                                        No hay órdenes de trabajo registradas.
-                                    </td>
-                                </tr>
+
                             <?php endif; ?>
                         </tbody>
                     </table>

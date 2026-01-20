@@ -18,6 +18,7 @@ class CrearTablaTerminosCondiciones extends Migration
                 'type' => 'INT',
                 'unsigned' => true,
                 'null' => true, // Null = Termino General (aplica a todo)
+                'after' => 'id'
             ],
             'titulo' => [
                 'type' => 'VARCHAR',

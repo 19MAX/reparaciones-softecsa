@@ -4,7 +4,7 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
-class CrearTablaTerminosCondiciones extends Migration
+class CrearTablaConfiguracionEmpresa extends Migration
 {
     public function up()
     {
@@ -14,21 +14,24 @@ class CrearTablaTerminosCondiciones extends Migration
                 'unsigned' => true,
                 'auto_increment' => true
             ],
-            'tipo_dispositivo_id' => [
-                'type' => 'INT',
-                'unsigned' => true,
-                'null' => true, // Null = Termino General (aplica a todo)
-            ],
-            'titulo' => [
+            'nombre_empresa' => [
                 'type' => 'VARCHAR',
                 'constraint' => 150
             ],
-            'contenido' => [
-                'type' => 'TEXT'
+            'logo_path' => [
+                'type' => 'VARCHAR',
+                'constraint' => 255,
+                'null' => true
             ],
-            'activo' => [
-                'type' => 'BOOLEAN',
-                'default' => true
+            'telefono' => [
+                'type' => 'VARCHAR',
+                'constraint' => 30,
+                'null' => true
+            ],
+            'direccion' => [
+                'type' => 'VARCHAR',
+                'constraint' => 255,
+                'null' => true
             ],
             'created_at' => [
                 'type' => 'DATETIME'
@@ -40,12 +43,11 @@ class CrearTablaTerminosCondiciones extends Migration
         ]);
 
         $this->forge->addPrimaryKey('id');
-        $this->forge->createTable('terminos_condiciones');
-        $this->forge->addForeignKey('tipo_dispositivo_id', 'tipos_dispositivo', 'id', 'CASCADE', 'CASCADE');
+        $this->forge->createTable('configuracion_empresa');
     }
 
     public function down()
     {
-        $this->forge->dropTable('terminos_condiciones');
+        $this->forge->dropTable('configuracion_empresa');
     }
 }

@@ -33,6 +33,17 @@ class CrearTablaConfiguracionEmpresa extends Migration
                 'constraint' => 255,
                 'null' => true
             ],
+            'email' => [
+                'type' => 'VARCHAR',
+                'constraint' => '150',
+                'null' => true,
+            ],
+            'valor_revision' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00,
+                'comment' => 'Costo base por revisión o diagnóstico',
+            ],
             'created_at' => [
                 'type' => 'DATETIME'
             ],

@@ -18,6 +18,8 @@ class UsuarioModel extends Model
         'apellidos',
         'password',
         'role',
+        'tipo_comision',
+        'valor_comision',
         'estado',
         'foto_perfil',
         'ruta_firma',

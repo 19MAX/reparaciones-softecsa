@@ -18,17 +18,6 @@ class CrearTablaDispositivos extends Migration
                 'type' => 'INT',
                 'unsigned' => true
             ],
-            'tecnico_id' => [
-                'type' => 'INT',
-                'unsigned' => true,
-                'null' => true,
-                'after' => 'orden_id'
-            ],
-            'tipo_dispositivo_id' => [
-                'type' => 'INT',
-                'unsigned' => true,
-                'null' => true,
-            ],
             'tipo' => [
                 'type' => 'VARCHAR',
                 'constraint' => 50
@@ -45,18 +34,6 @@ class CrearTablaDispositivos extends Migration
                 'type' => 'VARCHAR',
                 'constraint' => 100,
                 'null' => true
-            ],
-            'tipo_pass' => [
-                'type' => 'ENUM',
-                'constraint' => ['ninguno', 'pin', 'patron', 'contraseña', 'huella', 'facial'],
-                'default' => 'ninguno',
-                'comment' => 'Tipo de bloqueo del dispositivo',
-            ],
-            'pass_code' => [
-                'type' => 'VARCHAR',
-                'constraint' => 255,
-                'null' => true,
-                'comment' => 'Contraseña, PIN o descripción del patrón',
             ],
             'problema_reportado' => [
                 'type' => 'TEXT'
@@ -78,8 +55,7 @@ class CrearTablaDispositivos extends Migration
 
         // LLAVE FORÁNEA
         $this->forge->addForeignKey('orden_id', 'ordenes_trabajo', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->addForeignKey('tipo_dispositivo_id', 'tipos_dispositivo', 'id', 'RESTRICT', 'RESTRICT');
-        $this->forge->addForeignKey('tecnico_id', 'usuarios', 'id', 'SET NULL', 'RESTRICT');
+
         $this->forge->createTable('dispositivos');
     }
 

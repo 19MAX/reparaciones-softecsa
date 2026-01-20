@@ -4,7 +4,7 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
-class CrearTablaChecklistItems extends Migration
+class CrearTablaTiposDispositivo extends Migration
 {
     public function up()
     {
@@ -14,29 +14,26 @@ class CrearTablaChecklistItems extends Migration
                 'unsigned' => true,
                 'auto_increment' => true
             ],
-            'tipo_dispositivo_id' => [
-                'type' => 'INT',
-                'unsigned' => true,
-                'null' => true, // Si es null, aplica a TODOS
-            ],
-            'nombre' => [
+            'nombre' => [ // Ej: Celular, Laptop, Impresora, Consola
                 'type' => 'VARCHAR',
-                'constraint' => 150
+                'constraint' => 50
+            ],
+            'icono' => [ // Opcional: para mostrar en el frontend (ej: 'fa-mobile')
+                'type' => 'VARCHAR',
+                'constraint' => 50,
+                'null' => true
             ],
             'activo' => [
                 'type' => 'BOOLEAN',
                 'default' => true
             ],
         ]);
-
         $this->forge->addPrimaryKey('id');
-        $this->forge->addForeignKey('tipo_dispositivo_id', 'tipos_dispositivo', 'id', 'CASCADE', 'CASCADE');
-
-        $this->forge->createTable('checklist_items');
+        $this->forge->createTable('tipos_dispositivo');
     }
 
     public function down()
     {
-        $this->forge->dropTable('checklist_items');
+        $this->forge->dropTable('tipos_dispositivo');
     }
 }

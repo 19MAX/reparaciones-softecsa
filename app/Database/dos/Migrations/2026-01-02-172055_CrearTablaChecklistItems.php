@@ -14,11 +14,6 @@ class CrearTablaChecklistItems extends Migration
                 'unsigned' => true,
                 'auto_increment' => true
             ],
-            'tipo_dispositivo_id' => [
-                'type' => 'INT',
-                'unsigned' => true,
-                'null' => true, // Si es null, aplica a TODOS
-            ],
             'nombre' => [
                 'type' => 'VARCHAR',
                 'constraint' => 150
@@ -30,8 +25,6 @@ class CrearTablaChecklistItems extends Migration
         ]);
 
         $this->forge->addPrimaryKey('id');
-        $this->forge->addForeignKey('tipo_dispositivo_id', 'tipos_dispositivo', 'id', 'CASCADE', 'CASCADE');
-
         $this->forge->createTable('checklist_items');
     }
 

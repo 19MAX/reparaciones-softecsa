@@ -36,20 +36,6 @@ class CrearTablaUsuarios extends Migration
                 'constraint' => '255',
                 'null' => false,
             ],
-            'tipo_comision' => [
-                'type' => 'ENUM',
-                'constraint' => ['porcentaje', 'fijo'],
-                'default' => 'porcentaje',
-                'null' => true,
-                'comment' => 'Define si el valor es un % del total o un monto fijo por reparación'
-            ],
-            'valor_comision' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0.00,
-                'null' => true,
-                'comment' => 'Ej: 15.00 puede ser 15% o $15 según tipo_comision'
-            ],
             'role' => [
                 'type' => 'ENUM',
                 'constraint' => ['admin', 'recepcionista', 'tecnico'],

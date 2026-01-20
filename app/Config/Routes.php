@@ -48,4 +48,40 @@ $routes->group('admin', function (RouteCollection $routes) {
         $routes->post('crear', 'Admin\ChecklistController::crear');  // Para createAndSelectCheck
     });
 
+    $routes->group('tipos-dispositivos', function ($routes) {
+        $routes->get('', 'Admin\TiposDispositivosController::index');
+        $routes->post('crear', 'Admin\TiposDispositivosController::crear');
+        $routes->post('editar', 'Admin\TiposDispositivosController::editar');
+        $routes->post('eliminar', 'Admin\TiposDispositivosController::eliminar');
+    });
+
+    $routes->group('terminos-condiciones', function ($routes) {
+        $routes->get('', 'Admin\TerminosCondicionesController::index');
+        $routes->post('crear', 'Admin\TerminosCondicionesController::crear');
+        $routes->post('editar', 'Admin\TerminosCondicionesController::editar');
+        $routes->post('eliminar', 'Admin\TerminosCondicionesController::eliminar');
+    });
+
+    $routes->group('configuracion', function (RouteCollection $routes) {
+        $routes->get('', 'Admin\ConfiguracionController::index');
+        $routes->post('guardar', 'Admin\ConfiguracionController::guardar');
+    });
+
+    $routes->group('urgencias', function ($routes) {
+        $routes->get('/', 'Admin\UrgenciaController::index');
+        $routes->post('crear', 'Admin\UrgenciaController::crear');
+        $routes->post('editar', 'Admin\UrgenciaController::editar');
+        $routes->post('eliminar', 'Admin\UrgenciaController::eliminar');
+    });
+
+    $routes->group('historial', function ($routes) {
+        // Listado principal (Bitácora)
+        $routes->get('/', 'Admin\HistorialController::index');
+
+        // Acciones del CRUD
+        $routes->post('crear', 'Admin\HistorialController::crear');   // Crear nota manual
+        $routes->post('editar', 'Admin\HistorialController::editar'); // Editar comentario/visibilidad
+        $routes->post('eliminar', 'Admin\HistorialController::eliminar'); // Eliminar registro
+    });
+
 });
