@@ -17,9 +17,19 @@ class LoginController extends BaseController
 
     public function login()
     {
-        // Si ya hay sesión, pa' fuera
+        // Si ya hay sesión, redirigir según rol
         if (session()->get('isLoggedIn')) {
-            return redirect()->to('admin/dashboard');
+            $role = session()->get('role');
+            switch ($role) {
+                case 'admin':
+                    return redirect()->to('admin/dashboard');
+                case 'recepcionista':
+                    return redirect()->to('recepcionista/dashboard');
+                case 'tecnico':
+                    return redirect()->to('tecnico/dashboard');
+                default:
+                    return redirect()->to('admin/dashboard');
+            }
         }
         return view('auth/login');
     }
@@ -87,9 +97,23 @@ class LoginController extends BaseController
             'isLoggedIn' => true
         ]);
 
+        // Determinar redirect según rol
+        $redirectUrl = 'admin/dashboard'; // Default
+        switch ($usuario['role']) {
+            case 'admin':
+                $redirectUrl = 'admin/dashboard';
+                break;
+            case 'recepcionista':
+                $redirectUrl = 'recepcionista/dashboard';
+                break;
+            case 'tecnico':
+                $redirectUrl = 'tecnico/dashboard';
+                break;
+        }
+
         return $this->response->setJSON([
             'status' => 'success',
-            'redirect' => base_url('admin/dashboard'), // Cambia esto a tu ruta destino
+            'redirect' => base_url($redirectUrl),
             'token' => csrf_hash()
         ]);
     }

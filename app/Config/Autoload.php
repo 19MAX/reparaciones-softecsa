@@ -88,5 +88,5 @@ class Autoload extends AutoloadConfig
      *
      * @var list<string>
      */
-    public $helpers = ['response', 'formatear'];
+    public $helpers = ['response', 'formatear', 'orden_estados', 'sidebar', 'estado_dispositivo', 'estado_orden','prioridad'];
 }

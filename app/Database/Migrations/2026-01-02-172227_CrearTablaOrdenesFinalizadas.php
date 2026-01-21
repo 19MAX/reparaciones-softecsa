@@ -14,54 +14,48 @@ class CrearTablaOrdenesFinalizadas extends Migration
                 'unsigned' => true,
                 'auto_increment' => true
             ],
-            'codigo_orden' => [
-                'type' => 'VARCHAR',
-                'constraint' => 50
+            'orden_id' => [
+                'type' => 'INT',
+                'unsigned' => true,
+                'null' => false,
+                'comment' => 'ID de la orden en ordenes_trabajo'
             ],
-            'cliente_json' => [
-                'type' => 'LONGTEXT'
+            'fecha_finalizacion' => [
+                'type' => 'DATETIME',
+                'null' => false
             ],
-            'empresa_json' => [
-                'type' => 'LONGTEXT'
-            ],
-            'dispositivos_json' => [
-                'type' => 'LONGTEXT'
-            ],
-            'checklist_json' => [
-                'type' => 'LONGTEXT'
-            ],
-            'imagenes_json' => [
-                'type' => 'LONGTEXT'
-            ],
-            'terminos_texto' => [
-                'type' => 'LONGTEXT'
-            ],
-            'urgencia_json' => [
-                'type' => 'LONGTEXT',
-                'null' => true
-            ],
-            'mano_obra' => [
+            'mano_obra_total' => [
                 'type' => 'DECIMAL',
-                'constraint' => '10,2'
+                'constraint' => '10,2',
+                'default' => 0.00,
+                'comment' => 'Suma de mano_obra de todos los dispositivos'
             ],
-            'valor_repuestos' => [
+            'repuestos_total' => [
                 'type' => 'DECIMAL',
-                'constraint' => '10,2'
+                'constraint' => '10,2',
+                'default' => 0.00,
+                'comment' => 'Suma de valor_repuestos de todos los dispositivos'
             ],
             'total' => [
                 'type' => 'DECIMAL',
-                'constraint' => '10,2'
+                'constraint' => '10,2',
+                'default' => 0.00,
+                'comment' => 'Total cobrado al cliente'
             ],
-            'ganancia_tecnico' => [
+            'ganancia_total_tecnicos' => [
                 'type' => 'DECIMAL',
-                'constraint' => '10,2'
+                'constraint' => '10,2',
+                'default' => 0.00,
+                'comment' => 'Suma de ganancias de todos los técnicos'
             ],
-            'fecha_finalizacion' => [
-                'type' => 'DATETIME'
-            ],
+            'created_at' => [
+                'type' => 'DATETIME',
+                'null' => true
+            ]
         ]);
 
         $this->forge->addPrimaryKey('id');
+        $this->forge->addForeignKey('orden_id', 'ordenes_trabajo', 'id', 'RESTRICT', 'RESTRICT');
         $this->forge->createTable('ordenes_finalizadas');
     }
 

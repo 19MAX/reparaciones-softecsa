@@ -18,7 +18,7 @@
                     <div class="logo-header" data-background-color="dark">
 
                         <a href="index.html" class="logo">
-                            <img src="<?= base_url('assets') ?>/img/kaiadmin/logo_light.svg" alt="navbar brand"
+                            <img src="<?= base_url('assets') ?>/images/logo.png" alt="navbar brand"
                                 class="navbar-brand" height="20">
                         </a>
                         <div class="nav-toggle">

@@ -73,21 +73,9 @@ class CrearTablaOrdenesTrabajo extends Migration
                 'default' => 0
             ],
             'estado' => [
-                'type' => 'ENUM',
-                'constraint' => [
-                    'recibida',
-                    'en_diagnostico',
-                    'pendiente_aprobacion',
-                    'esperando_repuesto',
-                    'en_reparacion',
-                    'pruebas_calidad',
-                    'listo_para_retiro',
-                    'entregado',
-                    'cancelado',
-                    'irreparable',
-                    'garantia'
-                ],
-                'default' => 'recibida'
+                'type' => 'TINYINT',
+                'unsigned' => true,
+                'default' => 1
             ],
             'created_at' => [
                 'type' => 'DATETIME'

@@ -41,6 +41,7 @@ $routes->group('admin', function (RouteCollection $routes) {
         $routes->post('crear', 'Admin\OrdenController::guardar');
         $routes->post('guardar', 'Admin\OrdenController::guardar');
         $routes->get('imprimir/(:num)', 'Admin\OrdenController::imprimir/$1');
+        $routes->get('entregar/(:num)', 'Admin\OrdenController::entregar/$1');
     });
     $routes->group('checklist', function ($routes) {
         $routes->get('listar', 'Admin\ChecklistController::listar'); // Para fetchTopChecks
@@ -83,5 +84,42 @@ $routes->group('admin', function (RouteCollection $routes) {
         $routes->post('editar', 'Admin\HistorialController::editar'); // Editar comentario/visibilidad
         $routes->post('eliminar', 'Admin\HistorialController::eliminar'); // Eliminar registro
     });
+    // Dispositivos por técnico
+    $routes->get('dispositivos', 'Admin\DispositivoController::index');
+    $routes->get('dispositivos/ver-tecnico/(:num)', 'Admin\DispositivoController::verTecnico/$1');
 
+
+});
+
+$routes->group('recepcionista', function ($routes) {
+
+    // Dashboard
+    $routes->get('dashboard', 'Recepcionista\DashboardController::index');
+
+    // Órdenes de Trabajo
+    $routes->get('ordenes', 'Recepcionista\OrdenController::index');
+    $routes->get('ordenes/crear', 'Recepcionista\OrdenController::crear');
+    $routes->post('ordenes/guardar', 'Recepcionista\OrdenController::guardar');
+    $routes->get('ordenes/ver/(:num)', 'Recepcionista\OrdenController::ver/$1');
+    $routes->get('ordenes/imprimir/(:num)', 'Recepcionista\OrdenController::imprimir/$1');
+    $routes->post('ordenes/entregar/(:num)', 'Recepcionista\OrdenController::entregar/$1');
+
+    // Dispositivos
+    $routes->get('dispositivos/ver/(:num)', 'Recepcionista\DispositivoController::ver/$1');
+});
+
+
+// Grupo de rutas para técnicos
+$routes->group('tecnico', function ($routes) {
+
+    // Dashboard
+    $routes->get('dashboard', 'Tecnico\DashboardController::index');
+
+    //Dispositivos
+    $routes->get('dispositivos', 'Tecnico\DispositivoController::index');
+    $routes->get('dispositivos/ver/(:num)', 'Tecnico\DispositivoController::ver/$1');
+    $routes->post('dispositivos/actualizarEstado', 'Tecnico\DispositivoController::actualizarEstado');
+
+    // Ingresos
+    $routes->get('ingresos', 'Tecnico\IngresosController::index');
 });

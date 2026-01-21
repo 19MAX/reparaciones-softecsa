@@ -29,10 +29,6 @@ class CrearTablaDispositivos extends Migration
                 'unsigned' => true,
                 'null' => true,
             ],
-            'tipo' => [
-                'type' => 'VARCHAR',
-                'constraint' => 50
-            ],
             'marca' => [
                 'type' => 'VARCHAR',
                 'constraint' => 100
@@ -62,12 +58,27 @@ class CrearTablaDispositivos extends Migration
                 'type' => 'TEXT'
             ],
             'estado_reparacion' => [
-                'type' => 'VARCHAR',
-                'constraint' => 50
+                'type' => 'TINYINT',
+                'unsigned' => true,
+                'default' => 1
             ],
             'observaciones' => [
                 'type' => 'TEXT',
                 'null' => true
+            ],
+            'mano_obra' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00,
+                'null' => false,
+                'comment' => 'Costo de mano de obra para reparar este dispositivo'
+            ],
+            'valor_repuestos' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00,
+                'null' => false,
+                'comment' => 'Costo de repuestos utilizados en este dispositivo'
             ],
             'created_at' => [
                 'type' => 'DATETIME'

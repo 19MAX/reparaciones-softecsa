@@ -68,4 +68,17 @@ class HistorialDispositivoModel extends Model
             ->orderBy('historial_dispositivos.created_at', 'DESC')
             ->findAll();
     }
+
+    // Función para obtener historial de un dispositivo específico
+    public function obtenerHistorialDispositivo($dispositivoId)
+    {
+        return $this->select('historial_dispositivos.*, 
+                              usuarios.nombres as usuario_nombres, 
+                              usuarios.apellidos as usuario_apellidos,
+                              usuarios.role as usuario_rol')
+            ->join('usuarios', 'usuarios.id = historial_dispositivos.usuario_id')
+            ->where('historial_dispositivos.dispositivo_id', $dispositivoId)
+            ->orderBy('historial_dispositivos.created_at', 'DESC')
+            ->findAll();
+    }
 }

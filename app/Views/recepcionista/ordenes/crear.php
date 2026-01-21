@@ -52,11 +52,16 @@ Nueva Orden de Trabajo
         transition: all 0.2s;
     }
 
-    .selectgroup.selectgroup-success .selectgroup-input:checked+.selectgroup-button {
-        border-color: #31ce36;
-        color: #31ce36;
-        background: rgba(49, 206, 54, 0.15);
-        font-size: 1rem;
+    .selectgroup-input:checked+.selectgroup-button {
+        background-color: #0d6efd;
+        color: #fff;
+        border-color: #0d6efd;
+        z-index: 10;
+    }
+
+    /* Borde entre botones */
+    .selectgroup-item:not(:first-child) .selectgroup-button {
+        border-left: 0;
     }
 
     /* 2. Sidebar Pegajoso */
@@ -64,6 +69,12 @@ Nueva Orden de Trabajo
         position: sticky;
         top: 20px;
         z-index: 90;
+    }
+
+    /* 3. Ajustes Accordion */
+    .accordion-button:not(.collapsed) {
+        background-color: #f0f4ff;
+        color: #0d6efd;
     }
 
     .accordion-button:focus {
@@ -78,7 +89,7 @@ Nueva Orden de Trabajo
 
 <div x-data="ordenManager()" class="pb-5">
 
-    <form id="main-form" class="row" action="<?= base_url('admin/ordenes/guardar') ?>" method="post"
+    <form id="main-form" class="row" action="<?= base_url('recepcionista/ordenes/guardar') ?>" method="post"
         @submit.prevent="submitOrden">
         <div class="col-lg-8">
             <?= csrf_field() ?>
@@ -93,7 +104,7 @@ Nueva Orden de Trabajo
 
             <div class="accordion mb-3" id="devicesAccordion">
                 <template x-for="(dev, index) in devices" :key="index">
-                    <div class="accordion-item shadow-sm border-0 mb-3 rounded-3 overflow-hidden">
+                    <div class="accordion-item shadow-sm border-0 mb-3 rounded overflow-hidden">
                         <h2 class="accordion-header" :id="'heading'+index">
                             <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse"
                                 :data-bs-target="'#collapse'+index">
@@ -108,6 +119,24 @@ Nueva Orden de Trabajo
                         <div :id="'collapse'+index" class="accordion-collapse collapse show"
                             :data-bs-parent="'#devicesAccordion'">
                             <div class="accordion-body bg-white">
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <div class="p-2 bg-light rounded border border-light">
+                                            <label class="form-label small fw-bold text-muted mb-1">
+                                                <i class="fas fa-user-cog me-1"></i> Técnico Responsable
+                                            </label>
+                                            <select class="form-select form-select-sm"
+                                                :name="'devices['+index+'][tecnico_id]'" x-model="dev.tecnico_id">
+                                                <option value="">-- Sin asignar (Pendiente) --</option>
+                                                <template x-for="tec in tecnicosList" :key="tec.id">
+                                                    <option :value="tec.id" x-text="tec.nombres + ' ' + tec.apellidos">
+                                                    </option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="text-end mb-2" x-show="devices.length > 1">
                                     <button type="button"
                                         class="btn btn-sm text-danger link-danger text-decoration-none"
@@ -117,9 +146,9 @@ Nueva Orden de Trabajo
                                 </div>
 
                                 <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold text-muted">Tipo de dispositivo</label>
-                                        <select class="form-select form-control"
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-bold text-muted">Tipo</label>
+                                        <select class="form-select form-select-sm"
                                             :name="'devices['+index+'][tipo_dispositivo_id]'"
                                             x-model="dev.tipo_dispositivo_id" required>
                                             <option value="" disabled selected>Seleccione...</option>
@@ -128,85 +157,72 @@ Nueva Orden de Trabajo
                                             </template>
                                         </select>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-5">
                                         <label class="form-label small fw-bold text-muted">Equipo <span
                                                 class="text-danger">*</span></label>
-                                        <div class="input-group ">
+                                        <div class="input-group input-group-sm">
                                             <input type="text" class="form-control" placeholder="Marca"
                                                 :name="'devices['+index+'][marca]'" x-model="dev.marca" required>
                                             <input type="text" class="form-control" placeholder="Modelo"
                                                 :name="'devices['+index+'][modelo]'" x-model="dev.modelo" required>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="row mt-3">
-                                    <label class="form-label small fw-bold text-muted">Bloqueo de
-                                        Pantalla</label>
-                                    <div class="col-md-6">
-                                        <div class="selectgroup selectgroup-success ">
-                                            <label class="selectgroup-item">
-                                                <input type="radio" :name="'devices['+index+'][tipo_pass]'"
-                                                    value="ninguno" x-model="dev.tipo_pass" class="selectgroup-input">
-                                                <span class="selectgroup-button"><i class="fas fa-lock-open me-1"></i>
-                                                    Ninguna</span>
-                                            </label>
-                                            <label class="selectgroup-item">
-                                                <input type="radio" :name="'devices['+index+'][tipo_pass]'"
-                                                    value="patron" x-model="dev.tipo_pass" class="selectgroup-input">
-                                                <span class="selectgroup-button"><i class="fas fa-th me-1"></i>
-                                                    Patrón</span>
-                                            </label>
-                                            <label class="selectgroup-item">
-                                                <input type="radio" :name="'devices['+index+'][tipo_pass]'"
-                                                    value="contrasena" x-model="dev.tipo_pass"
-                                                    class="selectgroup-input">
-                                                <span class="selectgroup-button"><i class="fas fa-key me-1"></i>
-                                                    Clave</span>
-                                            </label>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold text-muted">Serie / IMEI</label>
+                                        <input type="text" class="form-control form-control-sm"
+                                            :name="'devices['+index+'][serie_imei]'" x-model="dev.serie_imei">
+                                    </div>
+
+                                    <div class="col-12 mt-4">
+                                        <label class="form-label small fw-bold text-muted">Bloqueo de
+                                            Pantalla</label>
+                                        <div class="row g-2 align-items-center">
+                                            <div class="col-md-6">
+                                                <div class="selectgroup w-100">
+                                                    <label class="selectgroup-item">
+                                                        <input type="radio" :name="'devices['+index+'][tipo_pass]'"
+                                                            value="ninguno" x-model="dev.tipo_pass"
+                                                            class="selectgroup-input">
+                                                        <span class="selectgroup-button"><i
+                                                                class="fas fa-lock-open me-1"></i> Ninguna</span>
+                                                    </label>
+                                                    <label class="selectgroup-item">
+                                                        <input type="radio" :name="'devices['+index+'][tipo_pass]'"
+                                                            value="patron" x-model="dev.tipo_pass"
+                                                            class="selectgroup-input">
+                                                        <span class="selectgroup-button"><i class="fas fa-th me-1"></i>
+                                                            Patrón</span>
+                                                    </label>
+                                                    <label class="selectgroup-item">
+                                                        <input type="radio" :name="'devices['+index+'][tipo_pass]'"
+                                                            value="contrasena" x-model="dev.tipo_pass"
+                                                            class="selectgroup-input">
+                                                        <span class="selectgroup-button"><i class="fas fa-key me-1"></i>
+                                                            Clave</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-6" x-show="dev.tipo_pass === 'contrasena'" x-transition>
+                                                <input type="text" class="form-control"
+                                                    :name="'devices['+index+'][pass_code]'" x-model="dev.pass_code"
+                                                    placeholder="Ingrese PIN o Contraseña numérica...">
+                                            </div>
+
+                                            <div class="col-md-6" x-show="dev.tipo_pass === 'patron'" x-transition>
+                                                <button type="button" class="btn btn-outline-dark w-100 border-dashed"
+                                                    @click="openPatternModal(index)">
+                                                    <i class="fas fa-draw-polygon me-1"></i>
+                                                    <span
+                                                        x-text="dev.patron_data ? 'Patrón Guardado (Editar)' : 'Dibujar Patrón'"></span>
+                                                </button>
+                                                <input type="hidden" :name="'devices['+index+'][patron_data]'"
+                                                    x-model="dev.patron_data">
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="col-md-6" x-show="dev.tipo_pass === 'contrasena'" x-transition>
-                                        <input type="text" class="form-control" :name="'devices['+index+'][pass_code]'"
-                                            x-model="dev.pass_code" placeholder="Ingrese PIN o Contraseña numérica...">
-                                    </div>
-
-                                    <div class="col-md-6" x-show="dev.tipo_pass === 'patron'" x-transition>
-                                        <button type="button" class="btn btn-outline-dark w-100 rounded-3"
-                                            @click="openPatternModal(index)">
-                                            <i class="fas fa-draw-polygon me-1"></i>
-                                            <span
-                                                x-text="dev.patron_data ? 'Patrón Guardado (Editar)' : 'Dibujar Patrón'"></span>
-                                        </button>
-                                        <input type="hidden" :name="'devices['+index+'][patron_data]'"
-                                            x-model="dev.patron_data">
-                                    </div>
-                                </div>
-
-                                <div class="row mt-3">
-
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold text-muted">Serie / IMEI</label>
-                                        <input type="text" class="form-control"
-                                            :name="'devices['+index+'][serie_imei]'" x-model="dev.serie_imei">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold text-muted">
-                                            Técnico Responsable
-                                        </label>
-                                        <select class="form-select form-control"
-                                            :name="'devices['+index+'][tecnico_id]'" x-model="dev.tecnico_id">
-                                            <option value="">-- Sin asignar (Pendiente) --</option>
-                                            <template x-for="tec in tecnicosList" :key="tec.id">
-                                                <option :value="tec.id" x-text="tec.nombres + ' ' + tec.apellidos">
-                                                </option>
-                                            </template>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="row mt-3">
-                                    <div class="col-md-6">
+                                    <div class="col-12 mt-3">
                                         <label class="form-label small fw-bold text-muted">Motivo de Ingreso <span
                                                 class="text-danger">*</span></label>
                                         <textarea class="form-control bg-light"
@@ -215,12 +231,14 @@ Nueva Orden de Trabajo
                                             required></textarea>
                                     </div>
 
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold text-muted">Observaciones / Accesorios</label>
+                                    <div class="col-12 mt-3">
+                                        <label class="form-label small fw-bold text-muted">Observaciones / Estado Físico
+                                            y Accesorios</label>
                                         <textarea class="form-control" :name="'devices['+index+'][observaciones]'"
-                                            x-model="dev.observaciones" rows="2"
-                                            placeholder="Ej: Pantalla rayada, se recibe sin cargador, etc"></textarea>
+                                            x-model="dev.observaciones" rows="3"
+                                            placeholder="Ej: Pantalla rayada, tapa trasera rota, se recibe sin cargador, con funda..."></textarea>
                                     </div>
+
                                 </div>
                             </div>
                         </div>
@@ -299,15 +317,14 @@ Nueva Orden de Trabajo
                 <div class="card border-0 mb-3">
                     <div class="card-header bg-white rounded-3 collapsed" id="headingThree" data-bs-toggle="collapse"
                         data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                        <div class="span-title fw-bold"><i class="fas fa-cog"></i> Configuración Global</div>
+                        <div class="span-title fw-bold">Configuración Global</div>
                         <div class="span-mode"></div>
                     </div>
                     <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordion">
-                        <!-- <hr class="m-0"> -->
-                        <div class="accordion-body bg-white rounded-bottom-3">
+                        <div class="card-body bg-white rounded-3">
                             <div class="mb-3">
                                 <label class="form-label small fw-bold">Prioridad de la orden</label>
-                                <select class="form-select form-control" name="urgencia_id">
+                                <select class="form-select" name="urgencia_id">
                                     <option value="" disabled selected>Seleccione la prioridad...</option>
                                     <?php if (!empty($urgencias)): ?>
                                         <?php foreach ($urgencias as $urgencia): ?>
@@ -319,12 +336,12 @@ Nueva Orden de Trabajo
                                     <?php endif; ?>
                                 </select>
                             </div>
-                            <div class="mb-2">
+                            <div class="mb-3">
                                 <label class="form-label small fw-bold text-primary">
-                                    Asignar todo a:
+                                    <i class="fas fa-users-cog"></i> Asignar todo a:
                                 </label>
                                 <div class="input-group">
-                                    <select class="form-select form-control" x-model="globalTechnician">
+                                    <select class="form-select" x-model="globalTechnician">
                                         <option value="">Seleccionar técnico...</option>
                                         <template x-for="tec in tecnicosList" :key="tec.id">
                                             <option :value="tec.id" x-text="tec.nombres"></option>
@@ -335,6 +352,9 @@ Nueva Orden de Trabajo
                                         <i class="fas fa-check-double"></i>
                                     </button>
                                 </div>
+                                <div class="form-text small">
+                                    Selecciona un técnico y pulsa el botón para asignarlo a todos los equipos listados.
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -344,18 +364,18 @@ Nueva Orden de Trabajo
                     <div class="card-header bg-white rounded-3 collapsed" id="headingOne" data-bs-toggle="collapse"
                         data-bs-target="#headingOne" aria-expanded="false" aria-controls="headingOne">
                         <div class="span-title fw-bold">
-                            <i class="fas fa-coins"></i> Agregar precios aproximados
+                            Agregar precios aproximados
                         </div>
                         <div class="span-mode"></div>
                     </div>
                     <div id="headingOne" class="collapse" aria-labelledby="headingThree" data-parent="#accordion">
-                        <div class="accordion-body bg-white rounded-bottom-3">
+                        <div class="card-body bg-white rounded-3">
                             <div class="mb-3">
                                 <label class="form-label small fw-bold">Valor aproximado mano de obra</label>
                                 <input name="valor_mano_obra_aproximado" type="number"
                                     class="form-control form-control-lg fw-bold" value="">
                             </div>
-                            <div class="mb-2">
+                            <div class="mb-3">
                                 <label class="form-label small fw-bold">Valor aproximado del repuesto</label>
                                 <input name="valor_repuesto_aproximado" type="number"
                                     class="form-control form-control-lg fw-bold" value="">

@@ -609,59 +609,37 @@
 
                 <!-- TOTALES CON GRID 2 COLUMNAS -->
                 <div class="totales">
-                    <?php
-                    // 1. DETERMINAR SI LA ORDEN ESTÁ FINALIZADA (PRECIOS FIJOS)
-                    // Usamos tus constantes globales. Si es Lista para retiro (4) o Entregada (5), ya es final.
-                    $es_finalizada = ($orden['estado'] == ESTADO_ORDEN_LISTA_RETIRO || $orden['estado'] == ESTADO_ORDEN_ENTREGADA);
-
-                    // 2. CONFIGURAR TEXTOS Y CLASES VISUALES
-                    $txt_mo = $es_finalizada ? "Mano de Obra:" : "M.O. Estimado:";
-                    $txt_rep = $es_finalizada ? "Repuestos:" : "Rep. Estimados:";
-                    $txt_total = $es_finalizada ? "TOTAL FINAL:" : "TOTAL ESTIMADO:";
-
-                    // Clase CSS para hacer texto gris/pequeño si es estimado
-                    $clase_est = $es_finalizada ? "" : "estimado";
-                    ?>
-
                     <div class="precio-grid">
                         <div class="precio-row">
                             <div class="precio-col">
-                                <?php
-                                // Solo mostramos cobro de revisión si NO está finalizada y si tiene valor > 0
-                                if (!$es_finalizada && isset($orden['valor_revision']) && $orden['valor_revision'] > 0):
-                                    ?>
-                                    <span class="precio-label">Revisión:</span>
-                                    <span class="precio-valor">$ <?= number_format($orden['valor_revision'], 2) ?></span>
-                                <?php else: ?>
-                                    &nbsp;
-                                <?php endif; ?>
+                                <span class="precio-label">Revision:</span>
+                                <span class="precio-valor">$
+                                    <?= number_format($orden['valor_revision'] ?? 0, 2) ?></span>
                             </div>
-
                             <div class="precio-col">
-                                <span class="precio-label <?= $clase_est ?>"><?= $txt_mo ?></span>
-                                <span class="precio-valor <?= $clase_est ?>">
-                                    <?php
-                                    // Si es finalizada, usamos el campo REAL 'mano_obra'
-                                    // Si es ingreso, usamos el campo APROXIMADO 'mano_obra_aproximado'
-                                    $mo_mostrar = $es_finalizada ? $orden['mano_obra'] : ($orden['mano_obra_aproximado'] ?? 0);
-                                    echo '$ ' . number_format($mo_mostrar, 2);
-                                    ?>
-                                </span>
+                                <span class="precio-label">Mano de Obra:</span>
+                                <span class="precio-valor">$ <?= number_format($orden['mano_obra'], 2) ?></span>
                             </div>
                         </div>
-
                         <div class="precio-row">
                             <div class="precio-col">
-                                <span class="precio-label <?= $clase_est ?>"><?= $txt_rep ?></span>
-                                <span class="precio-valor <?= $clase_est ?>">
-                                    <?php
-                                    // Misma lógica: Real vs Aproximado
-                                    $rep_mostrar = $es_finalizada ? $orden['valor_repuestos'] : ($orden['repuestos_aproximado'] ?? 0);
-                                    echo '$ ' . number_format($rep_mostrar, 2);
-                                    ?>
-                                </span>
+                                <span class="precio-label estimado">M.O.
+                                    Estimado:</span>
+                                <span class="precio-valor estimado">~$
+                                    <?= number_format($orden['mano_obra_aproximado'] ?? 0, 2) ?></span>
                             </div>
-
+                            <div class="precio-col">
+                                <span class="precio-label">Repuestos:</span>
+                                <span class="precio-valor">$ <?= number_format($orden['valor_repuestos'], 2) ?></span>
+                            </div>
+                        </div>
+                        <div class="precio-row">
+                            <div class="precio-col">
+                                <span class="precio-label estimado">Rep.
+                                    Estimados:</span>
+                                <span class="precio-valor estimado">~$
+                                    <?= number_format($orden['repuestos_aproximado'] ?? 0, 2) ?></span>
+                            </div>
                             <div class="precio-col">
                                 <span class="precio-label">Cargo Urgencia:</span>
                                 <span class="precio-valor">$
@@ -671,31 +649,11 @@
                     </div>
 
                     <div class="separador-precios"></div>
-
                     <?php
-                    // 3. CÁLCULO DEL GRAN TOTAL PARA MOSTRAR
-                    if ($es_finalizada) {
-                        // Si está terminada, confiamos en la columna 'total' de la base de datos
-                        // o la suma de los componentes reales.
-                        $gran_total = $orden['total'];
-
-                        // Un pequeño fix de seguridad visual por si 'total' no se actualizó bien en BD antigua:
-                        if ($gran_total == 0) {
-                            $gran_total = $orden['mano_obra'] + $orden['valor_repuestos'] + ($orden['cargo_prioridad'] ?? 0);
-                        }
-                    } else {
-                        // Si es Ingreso, sumamos los aproximados + revisión + urgencia
-                        $gran_total = ($orden['mano_obra_aproximado'] ?? 0)
-                            + ($orden['repuestos_aproximado'] ?? 0)
-                            + ($orden['cargo_prioridad'] ?? 0)
-                            + ($orden['valor_revision'] ?? 0);
-                    }
-
+                    $gran_total = $orden['mano_obra'] + $orden['valor_repuestos'] + ($orden['cargo_prioridad'] ?? 0);
                     $saldo = $gran_total - ($orden['abono'] ?? 0);
                     ?>
-
-                    <div class="total-destaque"><?= $txt_total ?> $ <?= number_format($gran_total, 2) ?></div>
-
+                    <div class="total-destaque">TOTAL ESTIMADO: $ <?= number_format($gran_total, 2) ?></div>
                     <div class="precio-grid saldo-row">
                         <div class="precio-row">
                             <div class="precio-col saldo-col">

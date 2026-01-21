@@ -34,7 +34,7 @@
                 <div class="d-flex align-items-center">
                     <h4 class="card-title"><i class="fas fa-toolbox me-2"></i>Listado de Órdenes</h4>
 
-                    <a href="<?= base_url('admin/ordenes/crear') ?>" class="btn btn-success btn-round ms-auto">
+                    <a href="<?= base_url('recepcionista/ordenes/crear') ?>" class="btn btn-success btn-round ms-auto">
                         <i class="fa fa-plus me-2"></i> Nueva Orden
                     </a>
                 </div>
@@ -70,7 +70,7 @@
                                         </td>
                                         <td>
                                             <div class="fw-bold">
-                                                <?= esc($orden['nombres']) ?> <?= esc($orden['apellidos']) ?>
+                                                <?= esc($orden['nombres']) ?>         <?= esc($orden['apellidos']) ?>
                                             </div>
                                         </td>
                                         <td>
@@ -87,36 +87,24 @@
                                         </td>
                                         <td>
                                             <div class="form-button-action">
-                                                <a href="<?= base_url('admin/ordenes/imprimir/' . $orden['id']) ?>"
+                                                <a href="<?= base_url('recepcionista/ordenes/imprimir/' . $orden['id']) ?>"
                                                     target="_blank" class="btn btn-link btn-secondary" data-bs-toggle="tooltip"
                                                     title="Imprimir Ticket">
                                                     <i class="fas fa-print"></i>
                                                 </a>
 
                                                 <!-- Enlace para ver el seguimiento público: -->
-
                                                 <a href="<?= base_url('consulta/orden/' . $orden['codigo_orden']) ?>"
                                                     target="_blank" class="btn btn-link btn-info" data-bs-toggle="tooltip"
                                                     title="Ver Seguimiento Público">
                                                     <i class="fas fa-truck-moving"></i>
                                                 </a>
 
-
-                                                <a href="<?= base_url('admin/ordenes/editar/' . $orden['id']) ?>"
+                                                <a href="<?= base_url('recepcionista/ordenes/ver/' . $orden['id']) ?>"
                                                     class="btn btn-link btn-primary" data-bs-toggle="tooltip"
-                                                    title="Gestionar Orden">
-                                                    <i class="fas fa-edit"></i>
+                                                    title="Ver Detalles">
+                                                    <i class="fas fa-eye"></i>
                                                 </a>
-
-                                                <form action="<?= base_url('admin/ordenes/eliminar') ?>" method="post"
-                                                    class="d-inline delete-form">
-                                                    <?= csrf_field() ?>
-                                                    <input type="hidden" name="id_orden" value="<?= $orden['id'] ?>">
-                                                    <button type="button" class="btn btn-link btn-danger btn-delete-orden"
-                                                        data-bs-toggle="tooltip" title="Eliminar">
-                                                        <i class="fa fa-times"></i>
-                                                    </button>
-                                                </form>
                                             </div>
                                         </td>
                                     </tr>
@@ -134,7 +122,6 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function () {
         // Inicializar DataTables con ordenamiento por la primera columna (ID) descendente
@@ -146,30 +133,9 @@
             order: [[1, 'desc']],
             layout: {
                 topStart: {
-                    buttons: ['pageLength','copy', 'excel', 'pdf', 'colvis']
+                    buttons: ['pageLength', 'copy', 'excel', 'pdf', 'colvis']
                 }
             }
-        });
-
-        // Manejo de eliminación con SweetAlert2
-        $('.btn-delete-orden').click(function (e) {
-            e.preventDefault();
-            let form = $(this).closest('form');
-
-            Swal.fire({
-                title: '¿Estás seguro?',
-                text: "No podrás revertir esto. Se borrarán los dispositivos asociados.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit();
-                }
-            })
         });
     });
 </script>
