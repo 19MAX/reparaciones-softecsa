@@ -40,34 +40,97 @@ class OrdenController extends BaseController
 
     public function index()
     {
-        $db = \Config\Database::connect();
+        // Obtener todas las órdenes con información básica
+        $ordenes = $this->ordenTrabajoModel
+            ->select('
+            ordenes_trabajo.id,
+            ordenes_trabajo.codigo_orden,
+            ordenes_trabajo.created_at,
+            ordenes_trabajo.estado_global,
+            ordenes_trabajo.urgencia_id,
+            CONCAT(c.nombres, " ", c.apellidos) as cliente_nombre_completo,
+            c.nombres as cliente_nombres,
+            c.apellidos as cliente_apellidos,
+            u.nombre as nombre_urgencia,
+        ')
+            ->join('clientes as c', 'c.id = ordenes_trabajo.cliente_id')
+            ->join('urgencias as u', 'u.id = ordenes_trabajo.urgencia_id', 'left')
+            ->orderBy('ordenes_trabajo.created_at', 'DESC')
+            ->findAll();
 
-        // Construimos la consulta
-        $builder = $db->table('ordenes_trabajo as o');
-        $builder->select('
-            o.*,
-            c.nombres,
-            c.apellidos,
-            u.nombre as nombre_prioridad,
-            u.recargo as recargo_prioridad,
-            u.descripcion as descripcion_prioridad,
-            (SELECT GROUP_CONCAT(CONCAT(marca, " ", modelo) SEPARATOR ", ")
-             FROM dispositivos d WHERE d.orden_id = o.id) as equipos_resumen
-        ');
+        // Enriquecer cada orden con el resumen de dispositivos
+        foreach ($ordenes as &$orden) {
+            $orden['equipos_resumen'] = $this->generarResumenDispositivos($orden['id']);
+            $orden['total_dispositivos'] = $this->contarDispositivos($orden['id']);
+        }
 
-        $builder->join('clientes as c', 'c.id = o.cliente_id');
-        $builder->join('urgencias as u', 'u.id = o.urgencia_id', 'left');
-
-        $builder->orderBy('o.id', 'DESC');
-
-        $ordenes = $builder->get()->getResultArray();
-
-        $data = [
+        return view('admin/ordenes/index', [
             'titulo' => 'Gestión de Órdenes',
             'ordenes' => $ordenes
-        ];
+        ]);
+    }
 
-        return view('admin/ordenes/index', $data);
+    /**
+     * Generar resumen legible de los dispositivos de una orden
+     * Ejemplo: "Laptop HP Pavilion, Celular Samsung Galaxy S21"
+     */
+    private function generarResumenDispositivos($ordenId)
+    {
+
+        $dispositivos = $this->dispositivoModel
+            ->select('
+            dispositivos.id,
+            td.nombre as tipo_dispositivo,
+            m.nombre as marca,
+            mod.nombre as modelo
+        ')
+            ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left')
+            ->join('marcas as m', 'm.id = dispositivos.marca_id', 'left')
+            ->join('modelos as mod', 'mod.id = dispositivos.modelo_id', 'left')
+            ->where('dispositivos.orden_id', $ordenId)
+            ->findAll();
+
+        if (empty($dispositivos)) {
+            return 'Sin dispositivos';
+        }
+
+        $resumen = [];
+        foreach ($dispositivos as $dispositivo) {
+            $partes = [];
+
+            // Tipo de dispositivo (siempre debe existir)
+            if (!empty($dispositivo['tipo_dispositivo'])) {
+                $partes[] = $dispositivo['tipo_dispositivo'];
+            }
+
+            // Marca
+            if (!empty($dispositivo['marca'])) {
+                $partes[] = $dispositivo['marca'];
+            }
+
+            // Modelo
+            if (!empty($dispositivo['modelo'])) {
+                $partes[] = $dispositivo['modelo'];
+            }
+
+            // Si solo hay tipo de dispositivo
+            if (count($partes) === 1) {
+                $resumen[] = $partes[0];
+            } else {
+                // Combinar todo
+                $resumen[] = implode(' ', $partes);
+            }
+        }
+
+        return implode(', ', $resumen);
+    }
+
+    /**
+     * Contar dispositivos de una orden
+     */
+    private function contarDispositivos($ordenId)
+    {
+        return $this->dispositivoModel->where('orden_id', $ordenId)->countAllResults();
     }
 
     public function crear()
@@ -87,51 +150,39 @@ class OrdenController extends BaseController
 
     public function guardar()
     {
-
-        // 1. Verificar Sesión (Solución al error usuario_id cannot be null)
+        // 1. Verificar Sesión
         $usuarioId = session()->get('id_usuario');
-
         if (empty($usuarioId)) {
-            // Si no hay sesión, redirigir al login o mostrar error
             return redirect()->to(base_url('login'))->with('mensaje', 'Tu sesión ha expirado.');
         }
-
-        // DEBUG
-        // $valores = $this->request->getPost();
-        // var_dump($valores);
-        // exit;
 
         try {
             // 2. Obtener datos del formulario
             $clienteId = $this->request->getPost('cliente_id');
-            $tecnicoId = $this->request->getPost('tecnico_id');
             $urgenciaId = $this->request->getPost('urgencia_id');
+            $prioridadDispositivoId = $this->request->getPost('prioridad_dispositivo_id');
             $devices = $this->request->getPost('devices');
-            $valor_mano_obra_Aproximado = $this->request->getPost('valor_mano_obra_aproximado') ?? 0.00;
-            $valor_repuesto_Aproximado = $this->request->getPost('valor_repuesto_aproximado') ?? 0.00;
-            // 2.1 Obtener el valor de la revison desde configuración_empresa
+            $valorManoObraAproximado = $this->request->getPost('valor_mano_obra_aproximado') ?? 0.00;
+            $valorRepuestoAproximado = $this->request->getPost('valor_repuesto_aproximado') ?? 0.00;
+
+            // 2.1 Obtener el valor de la revisión desde configuración_empresa
             $configuracionModel = new ConfiguracionModel();
             $configuracion = $configuracionModel->first();
             $valorRevision = $configuracion['valor_revision'] ?? 0.00;
+
             // Preparar datos para repopular el formulario en caso de error
             $data = [
                 'cliente_id' => $clienteId,
-                'tecnico_id' => $tecnicoId,
                 'urgencia_id' => $urgenciaId,
                 'devices' => $devices
             ];
 
             // 3. Validación
             $validation = \Config\Services::validation();
-
             $rules = [
                 'cliente_id' => [
                     'label' => 'Cliente',
-                    'rules' => 'required|is_not_unique[clientes.id]', // Debe existir en la tabla clientes
-                ],
-                'tecnico_id' => [
-                    'label' => 'Técnico',
-                    'rules' => 'permit_empty|is_not_unique[usuarios.id]',
+                    'rules' => 'required|is_not_unique[clientes.id]',
                 ],
                 'urgencia_id' => [
                     'label' => 'Prioridad/Urgencia',
@@ -139,30 +190,33 @@ class OrdenController extends BaseController
                 ],
                 'devices' => [
                     'label' => 'Dispositivos',
-                    'rules' => 'required', // Validamos manualmente que sea array después
+                    'rules' => 'required',
                 ],
-                // Validamos que SI se envía un técnico en un dispositivo, este exista
-                'devices.*.tecnico_id' => [
-                    'label' => 'Técnico del dispositivo',
-                    'rules' => 'permit_empty|is_not_unique[usuarios.id]',
-                ]
             ];
 
             $validation->setRules($rules);
 
             if (!$validation->run($data)) {
-                // Usamos tu helper redirectView para volver a la vista de crear
-                // Nota: Asegúrate de que 'admin/ordenes/crear' reciba de nuevo los datos para no perderlos
-                return redirectView('admin/ordenes/crear', $validation, [['Corrija los errores del formulario', 'error', 'top-end']], $data);
+                return redirectView(
+                    'admin/ordenes/crear',
+                    $validation,
+                    [['Corrija los errores del formulario', 'error', 'top-end']],
+                    $data
+                );
             }
 
             // Validación manual extra: Verificar que devices sea un array válido
             if (empty($devices) || !is_array($devices)) {
-                return redirectView('admin/ordenes/crear', null, [['Debe agregar al menos un dispositivo', 'error', 'top-end']], $data);
+                return redirectView(
+                    'admin/ordenes/crear',
+                    null,
+                    [['Debe agregar al menos un dispositivo', 'error', 'top-end']],
+                    $data
+                );
             }
 
             // ---------------------------------------------------
-            // 4. LOGICA DE GUARDADO (Transacción)
+            // 4. LÓGICA DE GUARDADO (Transacción)
             // ---------------------------------------------------
             $db = \Config\Database::connect();
             $db->transStart();
@@ -170,99 +224,165 @@ class OrdenController extends BaseController
             // Instanciar Modelos
             $ordenModel = new \App\Models\OrdenTrabajoModel();
             $dispositivoModel = new \App\Models\DispositivoModel();
-            $checklistRelModel = new \App\Models\ChecklistDispositivoModel();
+            $dispositivoProblemasModel = new \App\Models\DispositivoProblemasModel(); // NUEVO
+            $dispositivoAccesoriosModel = new \App\Models\DispositivoAccesorioModel(); // NUEVO
+            $dispositivoCheckModel = new \App\Models\DispositivoCheckModel(); // NUEVO
             $historialModel = new \App\Models\HistorialDispositivoModel();
-            // A. Insertar Orden
+
+            // A. Generar código de orden
             $codigoOrden = 'ORD-' . date('Y') . '-' . strtoupper(substr(uniqid(), -5));
 
+            // B. Insertar Orden (SIN dispositivos aún)
             $ordenData = [
                 'codigo_orden' => $codigoOrden,
                 'cliente_id' => $clienteId,
-                'usuario_id' => $usuarioId, // Aquí usamos la variable validada al inicio
-                'tecnico_id' => null,
+                'usuario_id' => $usuarioId,
                 'urgencia_id' => $urgenciaId ?: null,
-                'estado' => ESTADO_ORDEN_ABIERTA,
+                'estado_global' => 'pendiente', // Estado inicial
+                'es_reclamo_garantia' => false,
                 'created_at' => date('Y-m-d H:i:s'),
-                'mano_obra' => 0,
-                'valor_repuestos' => 0,
-                'valor_revision' => $valorRevision,
-                'mano_obra_aproximado' => $valor_mano_obra_Aproximado,
-                'repuestos_aproximado' => $valor_repuesto_Aproximado,
-                'total' => $valorRevision, // Incluir el valor de la revisión
             ];
 
             $ordenModel->insert($ordenData);
             $ordenId = $ordenModel->getInsertID();
 
-            // C. Insertar Dispositivos (Loop)
+            // C. Loop: Insertar cada Dispositivo
             foreach ($devices as $dev) {
-                // Lógica Pass/Patrón
+
+                // C.1 Lógica Pass/Patrón
                 $passwordFinal = '';
                 $tipoPass = $dev['tipo_pass'] ?? 'ninguno';
 
                 if ($tipoPass === 'patron') {
                     $passwordFinal = $dev['patron_data'] ?? '';
-                } elseif (in_array($tipoPass, ['contrasena', 'pin'])) {
+                } elseif (in_array($tipoPass, ['contrasena', 'contraseña', 'pin'])) {
                     $passwordFinal = $dev['pass_code'] ?? '';
                 }
-                // Obtener el técnico específico de este dispositivo
+
+                // C.2 Obtener técnico específico del dispositivo
                 $tecnicoDispositivo = !empty($dev['tecnico_id']) ? $dev['tecnico_id'] : null;
 
+                // C.3 Insertar Dispositivo
                 $dispositivoInsert = [
                     'orden_id' => $ordenId,
                     'tipo_dispositivo_id' => $dev['tipo_dispositivo_id'] ?? null,
-                    'tecnico_id' => $tecnicoDispositivo, // <--- AQUÍ SE GUARDA AHORA
-                    'marca' => $dev['marca'],
-                    'modelo' => $dev['modelo'],
+                    'tecnico_id' => $tecnicoDispositivo,
+                    'marca_id' => $dev['marca_id'] ?? null,
+                    'modelo_id' => $dev['modelo_id'] ?? null,
                     'serie_imei' => $dev['serie_imei'] ?? null,
-                    'problema_reportado' => $dev['problema_reportado'] ?? '', // Mapeo correcto del name del input
                     'tipo_pass' => $tipoPass,
                     'pass_code' => $passwordFinal,
-                    'estado_reparacion' => ESTADO_DISPOSITIVO_INGRESADO,
-                    'observaciones' => $dev['observaciones'] ?? null,
+                    'estado_diagnostico' => 'pendiente', // Estado inicial
+                    'cliente_autoriza_reparacion' => null,
+                    'requiere_cotizacion' => false,
+                    'tiene_garantia_activa' => false,
+                    'veces_reclamada_garantia' => 0,
+                    'prioridad_dispositivo_id' => $prioridadDispositivoId ?? null,
                     'created_at' => date('Y-m-d H:i:s')
                 ];
 
                 $dispositivoModel->insert($dispositivoInsert);
                 $dispositivoId = $dispositivoModel->getInsertID();
-                // C. Crear Historial Inicial (IMPORTANTE PARA TUS MÉTRICAS)
+
+                // C.4 Insertar PROBLEMAS del dispositivo
+                // IMPORTANTE: problema_reportado ahora es un ID o array de IDs
+                if (isset($dev['problema_reportado'])) {
+                    // Convertir a array si es un solo valor
+                    $problemasIds = is_array($dev['problema_reportado'])
+                        ? $dev['problema_reportado']
+                        : [$dev['problema_reportado']];
+
+                    foreach ($problemasIds as $problemaId) {
+                        if (!empty($problemaId)) {
+                            $dispositivoProblemasModel->insert([
+                                'dispositivo_id' => $dispositivoId,
+                                'problema_comun_id' => $problemaId,
+                                'prioridad' => 'media', // Por defecto
+                                'diagnostico_inicial' => $dev['observaciones'] ?? '', // Observaciones del cliente
+                                'fue_reparado' => null, // En proceso
+                                'es_reparacion_garantia' => false,
+                                'created_at' => date('Y-m-d H:i:s')
+                            ]);
+                        }
+                    }
+                }
+
+                // C.5 Insertar ACCESORIOS del dispositivo
+                if (isset($dev['accesorios']) && is_array($dev['accesorios'])) {
+                    foreach ($dev['accesorios'] as $accesorioId) {
+                        if (!empty($accesorioId)) {
+                            $dispositivoAccesoriosModel->insert([
+                                'dispositivo_id' => $dispositivoId,
+                                'accesorio_id' => $accesorioId,
+                                'estado' => 'bueno', // Estado por defecto
+                                'observacion' => null,
+                                'created_at' => date('Y-m-d H:i:s')
+                            ]);
+                        }
+                    }
+                }
+
+                // C.6 Insertar CHECKLIST del dispositivo
+                if (isset($dev['checklist']) && is_array($dev['checklist'])) {
+                    foreach ($dev['checklist'] as $checklistId) {
+                        if (!empty($checklistId)) {
+                            $dispositivoCheckModel->insert([
+                                'dispositivo_id' => $dispositivoId,
+                                'checklist_item_id' => $checklistId,
+                                'observacion' => null,
+                                'created_at' => date('Y-m-d H:i:s')
+                            ]);
+                        }
+                    }
+                }
+
+                // C.7 Crear Historial Inicial del dispositivo
+                $comentarioHistorial = 'Ingreso del equipo a taller.';
+                if ($tecnicoDispositivo) {
+                    $comentarioHistorial .= ' Asignado a técnico.';
+                } else {
+                    $comentarioHistorial .= ' Sin asignar.';
+                }
+
+                // Agregar información de problemas al historial
+                if (isset($problemasIds) && count($problemasIds) > 0) {
+                    $comentarioHistorial .= ' Problemas reportados: ' . count($problemasIds);
+                }
+
                 $historialModel->insert([
                     'dispositivo_id' => $dispositivoId,
-                    'usuario_id' => $usuarioId, // Quien recibe el equipo (Recepcionista)
+                    'usuario_id' => $usuarioId,
                     'estado_anterior' => null,
                     'estado_nuevo' => 'recibida',
-                    'comentario' => 'Ingreso del equipo a taller. ' . ($tecnicoDispositivo ? 'Asignado a técnico.' : 'Sin asignar.'),
+                    'comentario' => $comentarioHistorial,
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
-
-                // D. Insertar Checklist del dispositivo actual
-                // if (isset($dev['checklist']) && is_array($dev['checklist'])) {
-                //     foreach ($dev['checklist'] as $checkId) {
-                //         $checklistRelModel->insert([
-                //             'dispositivo_id' => $dispositivoId,
-                //             'checklist_item_id' => $checkId,
-                //             'estado' => 1,
-                //             'observacion' => null
-                //         ]);
-                //     }
-                // }
             }
 
+            // D. Completar la transacción
             $db->transComplete();
 
             if ($db->transStatus() === false) {
-                // Si falla la BD, forzamos excepción para caer en el catch
                 throw new \Exception('Error de base de datos al confirmar la orden.');
             }
 
-            // ÉXITO: Redirigimos al listado (o a imprimir)
-            return redirectView('admin/ordenes', null, [['Orden ' . $codigoOrden . ' generada exitosamente', 'success', 'top-end']], null);
+            // ÉXITO: Redirigimos al listado o a imprimir
+            return redirectView(
+                'admin/ordenes',
+                null,
+                [['Orden ' . $codigoOrden . ' generada exitosamente', 'success', 'top-end']],
+                null
+            );
 
         } catch (\Exception $e) {
             log_message('error', '[OrdenController::guardar] ' . $e->getMessage());
 
-            // Usamos redirectView para volver al formulario con el mensaje de error y los datos previos
-            return redirectView('admin/ordenes/crear', null, [['Error del sistema: ' . $e->getMessage(), 'error', 'top-end']], $data ?? []);
+            return redirectView(
+                'admin/ordenes/crear',
+                null,
+                [['Error del sistema: ' . $e->getMessage(), 'error', 'top-end']],
+                $data ?? []
+            );
         }
     }
     public function imprimir($id)

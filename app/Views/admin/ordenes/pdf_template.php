@@ -470,7 +470,7 @@
         <div class="header-left">
             <div class="header-content">
                 <div class="h-logo">
-                    <img src="https://static.vecteezy.com/system/resources/thumbnails/038/600/554/small_2x/adobe-photoshop-logos-adobe-icons-abstract-art-free-vector.jpg"
+                    <img src="<?=base_url('logo_path')?>"
                         alt="Logo" class="logo">
                 </div>
                 <div class="h-empresa">

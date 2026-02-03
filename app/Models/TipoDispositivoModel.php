@@ -43,4 +43,11 @@ class TipoDispositivoModel extends Model
     protected $afterFind      = [];
     protected $beforeDelete   = [];
     protected $afterDelete    = [];
+
+    public function getTiposActivos()
+    {
+        return $this->where('activo', 1)
+            ->orderBy('nombre', 'ASC')
+            ->findAll();
+    }
 }

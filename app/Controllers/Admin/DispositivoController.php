@@ -3,16 +3,35 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Models\DispositivoAccesorioModel;
+use App\Models\DispositivoCheckModel;
 use App\Models\DispositivoModel;
+use App\Models\DispositivoProblemasModel;
+use App\Models\GarantiaModel;
+use App\Models\HistorialDiagnosticoModel;
+use App\Models\HistorialDispositivoModel;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class DispositivoController extends BaseController
 {
     protected $dispositivoModel;
 
+    protected $problemaModel;
+    protected $accesorioModel;
+    protected $checkModel;
+    protected $historialDiagnosticoModel;
+    protected $historialEstadoModel;
+    protected $garantiaModel;
+
     public function __construct()
     {
         $this->dispositivoModel = new DispositivoModel();
+        $this->problemaModel = new DispositivoProblemasModel();
+        $this->accesorioModel = new DispositivoAccesorioModel();
+        $this->checkModel = new DispositivoCheckModel();
+        $this->historialDiagnosticoModel = new HistorialDiagnosticoModel();
+        $this->historialEstadoModel = new HistorialDispositivoModel();
+        $this->garantiaModel = new GarantiaModel();
     }
 
     /**
@@ -119,5 +138,164 @@ class DispositivoController extends BaseController
         ];
 
         return view('admin/dispositivos/ver_tecnico', $data);
+    }
+
+
+    public function detalle($dispositivoId)
+    {
+        // Verificar sesión
+        if (!session()->get('id_usuario')) {
+            return redirect()->to(base_url('login'));
+        }
+
+        try {
+            // Obtener información completa del dispositivo
+            $dispositivo = $this->obtenerDatosDispositivo($dispositivoId);
+
+            if (!$dispositivo) {
+                session()->setFlashdata('error', 'Dispositivo no encontrado');
+                return redirect()->to(base_url('admin/ordenes'));
+            }
+
+            // Obtener problemas
+            $problemas = $this->obtenerProblemas($dispositivoId);
+
+            // Obtener accesorios
+            $accesorios = $this->obtenerAccesorios($dispositivoId);
+
+            // Obtener checklist
+            $checklist = $this->obtenerChecklist($dispositivoId);
+
+            // Obtener historial de diagnósticos
+            $historialDiagnostico = $this->obtenerHistorialDiagnostico($dispositivoId);
+
+            // Obtener historial de estados
+            $historialEstados = $this->obtenerHistorialEstados($dispositivoId);
+
+            // Obtener garantías
+            $garantias = $this->obtenerGarantias($dispositivoId);
+
+            $data = [
+                'titulo' => 'Detalle del Dispositivo',
+                'dispositivo' => $dispositivo,
+                'problemas' => $problemas,
+                'accesorios' => $accesorios,
+                'checklist' => $checklist,
+                'historial_diagnostico' => $historialDiagnostico,
+                'historial_estados' => $historialEstados,
+                'garantias' => $garantias,
+            ];
+
+            return view('admin/dispositivos/detalle', $data);
+
+        } catch (\Exception $e) {
+            log_message('error', '[DispositivoController::detalle] ' . $e->getMessage());
+            session()->setFlashdata('error', 'Error al cargar el detalle del dispositivo');
+            return redirect()->to(base_url('admin/ordenes'));
+        }
+    }
+
+    // Métodos auxiliares privados
+
+    private function obtenerDatosDispositivo($dispositivoId)
+    {
+        return $this->dispositivoModel
+            ->select('
+                dispositivos.*,
+                td.nombre as tipo_dispositivo,
+                m.nombre as marca,
+                mod.nombre as modelo,
+                CONCAT(u.nombres, " ", u.apellidos) as tecnico_asignado,
+                ot.codigo_orden,
+                CONCAT(c.nombres, " ", c.apellidos) as cliente_nombre
+            ')
+            ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left')
+            ->join('marcas as m', 'm.id = dispositivos.marca_id', 'left')
+            ->join('modelos as mod', 'mod.id = dispositivos.modelo_id', 'left')
+            ->join('usuarios as u', 'u.id = dispositivos.tecnico_id', 'left')
+            ->join('ordenes_trabajo as ot', 'ot.id = dispositivos.orden_id')
+            ->join('clientes as c', 'c.id = ot.cliente_id')
+            ->where('dispositivos.id', $dispositivoId)
+            ->first();
+    }
+
+    private function obtenerProblemas($dispositivoId)
+    {
+        return $this->problemaModel
+            ->select('
+                dispositivo_problemas.*,
+                pc.nombre as problema
+            ')
+            ->join('problemas_comunes as pc', 'pc.id = dispositivo_problemas.problema_comun_id', 'left')
+            ->where('dispositivo_problemas.dispositivo_id', $dispositivoId)
+            ->orderBy('dispositivo_problemas.prioridad', 'DESC')
+            ->findAll();
+    }
+
+    private function obtenerAccesorios($dispositivoId)
+    {
+        return $this->accesorioModel
+            ->select('
+                dispositivo_accesorios.*,
+                a.nombre as accesorio
+            ')
+            ->join('accesorios as a', 'a.id = dispositivo_accesorios.accesorio_id')
+            ->where('dispositivo_accesorios.dispositivo_id', $dispositivoId)
+            ->findAll();
+    }
+
+    private function obtenerChecklist($dispositivoId)
+    {
+        return $this->checkModel
+            ->select('
+                dispositivo_check.*,
+                ci.nombre as item
+            ')
+            ->join('checklist_items as ci', 'ci.id = dispositivo_check.checklist_item_id')
+            ->where('dispositivo_check.dispositivo_id', $dispositivoId)
+            ->findAll();
+    }
+
+    private function obtenerHistorialDiagnostico($dispositivoId)
+    {
+        return $this->historialDiagnosticoModel
+            ->select('
+                historial_diagnostico.*,
+                CONCAT(u.nombres, " ", u.apellidos) as tecnico
+            ')
+            ->join('usuarios as u', 'u.id = historial_diagnostico.tecnico_id')
+            ->where('historial_diagnostico.dispositivo_id', $dispositivoId)
+            ->orderBy('historial_diagnostico.fecha_inicio_diagnostico', 'DESC')
+            ->findAll();
+    }
+
+    private function obtenerHistorialEstados($dispositivoId)
+    {
+        return $this->historialEstadoModel
+            ->select('
+                historial_dispositivo.*,
+                CONCAT(u.nombres, " ", u.apellidos) as usuario
+            ')
+            ->join('usuarios as u', 'u.id = historial_dispositivo.usuario_id')
+            ->where('historial_dispositivo.dispositivo_id', $dispositivoId)
+            ->orderBy('historial_dispositivo.created_at', 'DESC')
+            ->findAll();
+    }
+
+    private function obtenerGarantias($dispositivoId)
+    {
+        return $this->garantiaModel
+            ->select('
+                garantias.*,
+                tg.nombre as tipo_garantia,
+                dp.problema_comun_id,
+                pc.nombre as problema_cubierto
+            ')
+            ->join('tipos_garantia as tg', 'tg.id = garantias.tipo_garantia_id')
+            ->join('dispositivo_problemas as dp', 'dp.id = garantias.problema_reparado_id')
+            ->join('problemas_comunes as pc', 'pc.id = dp.problema_comun_id', 'left')
+            ->where('garantias.dispositivo_id', $dispositivoId)
+            ->orderBy('garantias.fecha_inicio', 'DESC')
+            ->findAll();
     }
 }

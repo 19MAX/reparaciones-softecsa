@@ -43,4 +43,32 @@ class ClienteModel extends Model
     protected $afterFind      = [];
     protected $beforeDelete   = [];
     protected $afterDelete    = [];
+
+    public function buscarPorCedula($cedula)
+    {
+        return $this->where('cedula', $cedula)->first();
+    }
+
+    public function getClientesConOrdenes()
+    {
+        return $this->select('clientes.*, COUNT(ordenes_trabajo.id) as total_ordenes')
+            ->join('ordenes_trabajo', 'ordenes_trabajo.cliente_id = clientes.id', 'left')
+            ->groupBy('clientes.id')
+            ->findAll();
+    }
+
+    public function getHistorialCliente($clienteId)
+    {
+        $db = $this->db;
+
+        return $db->table('ordenes_trabajo ot')
+            ->select('ot.*, COUNT(d.id) as total_dispositivos')
+            ->join('dispositivos d', 'd.orden_id = ot.id', 'left')
+            ->where('ot.cliente_id', $clienteId)
+            ->groupBy('ot.id')
+            ->orderBy('ot.created_at', 'DESC')
+            ->get()
+            ->getResultArray();
+    }
+
 }

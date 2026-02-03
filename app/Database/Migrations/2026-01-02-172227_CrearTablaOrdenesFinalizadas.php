@@ -24,13 +24,13 @@ class CrearTablaOrdenesFinalizadas extends Migration
                 'type' => 'DATETIME',
                 'null' => false
             ],
-            'mano_obra_total' => [
+            'total_mano_obra' => [
                 'type' => 'DECIMAL',
                 'constraint' => '10,2',
                 'default' => 0.00,
-                'comment' => 'Suma de mano_obra de todos los dispositivos'
+                'comment' => 'Suma de todos los dispositivos',
             ],
-            'repuestos_total' => [
+            'total_repuestos' => [
                 'type' => 'DECIMAL',
                 'constraint' => '10,2',
                 'default' => 0.00,
@@ -48,6 +48,29 @@ class CrearTablaOrdenesFinalizadas extends Migration
                 'default' => 0.00,
                 'comment' => 'Suma de ganancias de todos los técnicos'
             ],
+
+            //prueba
+            'recargo_urgencia' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00,
+            ],
+            'total_facturado' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'after' => 'recargo_urgencia',
+            ],
+            'abonos_recibidos' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00,
+            ],
+            'saldo_pendiente' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00,
+            ],
+
             'created_at' => [
                 'type' => 'DATETIME',
                 'null' => true

@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class HistorialDispositivoModel extends Model
 {
-    protected $table = 'historial_dispositivos';
+    protected $table = 'historial_dispositivo';
     protected $primaryKey = 'id';
     protected $useAutoIncrement = true;
     protected $returnType = 'array';

@@ -22,20 +22,24 @@ class CrearTablaDispositivos extends Migration
                 'type' => 'INT',
                 'unsigned' => true,
                 'null' => true,
-                'after' => 'orden_id'
             ],
             'tipo_dispositivo_id' => [
                 'type' => 'INT',
                 'unsigned' => true,
                 'null' => true,
             ],
-            'marca' => [
-                'type' => 'VARCHAR',
-                'constraint' => 100
+            // Campos de marca/modelo
+            'marca_id' => [
+                'type' => 'INT',
+                'constraint' => 11,
+                'unsigned' => true,
+                'null' => true,
             ],
-            'modelo' => [
-                'type' => 'VARCHAR',
-                'constraint' => 100
+            'modelo_id' => [
+                'type' => 'INT',
+                'constraint' => 11,
+                'unsigned' => true,
+                'null' => true,
             ],
             'serie_imei' => [
                 'type' => 'VARCHAR',
@@ -54,32 +58,101 @@ class CrearTablaDispositivos extends Migration
                 'null' => true,
                 'comment' => 'Contraseña, PIN o descripción del patrón',
             ],
-            'problema_reportado' => [
-                'type' => 'TEXT'
+
+            // Campos de diagnóstico
+            'estado_diagnostico' => [
+                'type' => 'ENUM',
+                'constraint' => ['pendiente', 'en_revision', 'diagnosticado', 'sin_diagnostico'],
+                'default' => 'pendiente',
             ],
-            'estado_reparacion' => [
-                'type' => 'TINYINT',
-                'unsigned' => true,
-                'default' => 1
+            'tiempo_diagnostico_minutos' => [
+                'type' => 'INT',
+                'constraint' => 11,
+                'null' => true,
             ],
-            'observaciones' => [
+            'diagnostico_encontrado' => [
+                'type' => 'BOOLEAN',
+                'null' => true,
+            ],
+            'diagnostico_detalle' => [
                 'type' => 'TEXT',
-                'null' => true
+                'null' => true,
             ],
-            'mano_obra' => [
+            'diagnostico_cliente' => [
+                'type' => 'TEXT',
+                'null' => true,
+                'comment' => 'Sección para dar una versión simplificada para cliente',
+            ],
+            'costo_diagnostico_estimado' => [
                 'type' => 'DECIMAL',
                 'constraint' => '10,2',
-                'default' => 0.00,
-                'null' => false,
-                'comment' => 'Costo de mano de obra para reparar este dispositivo'
+                'null' => true,
             ],
-            'valor_repuestos' => [
+
+            // Decisión del cliente
+            'cliente_autoriza_reparacion' => [
+                'type' => 'BOOLEAN',
+                'null' => true,
+            ],
+            'fecha_respuesta_cliente' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
+            'razon_rechazo' => [
+                'type' => 'TEXT',
+                'null' => true,
+            ],
+
+            // Cobro de revisión
+            'cobra_valor_revision' => [
+                'type' => 'BOOLEAN',
+                'default' => false,
+            ],
+            'valor_revision_cobrado' => [
                 'type' => 'DECIMAL',
                 'constraint' => '10,2',
-                'default' => 0.00,
-                'null' => false,
-                'comment' => 'Costo de repuestos utilizados en este dispositivo'
+                'null' => true,
             ],
+            'razon_cobro_revision' => [
+                'type' => 'TEXT',
+                'null' => true,
+            ],
+            'fecha_estimada_entrega' => [
+                'type' => 'DATE',
+                'null' => true,
+            ],
+            'fecha_entrega_real' => [
+                'type' => 'DATE',
+                'null' => true,
+            ],
+            'requiere_cotizacion' => [
+                'type' => 'BOOLEAN',
+                'default' => false,
+            ],
+            'prioridad_dispositivo_id' => [
+                'type' => 'INT',
+                'constraint' => 11,
+                'unsigned' => true,
+                'null' => true,
+                'comment' => 'Anula prioridad de orden',
+            ],
+
+            // Campos de garantía (cache)
+            'tiene_garantia_activa' => [
+                'type' => 'BOOLEAN',
+                'default' => false,
+            ],
+            'garantia_vence_en' => [
+                'type' => 'DATE',
+                'null' => true,
+            ],
+            'veces_reclamada_garantia' => [
+                'type' => 'INT',
+                'constraint' => 11,
+                'default' => 0,
+            ],
+
+
             'created_at' => [
                 'type' => 'DATETIME'
             ],
@@ -90,8 +163,22 @@ class CrearTablaDispositivos extends Migration
         // LLAVE FORÁNEA
         $this->forge->addForeignKey('orden_id', 'ordenes_trabajo', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addForeignKey('tipo_dispositivo_id', 'tipos_dispositivo', 'id', 'RESTRICT', 'RESTRICT');
-        $this->forge->addForeignKey('tecnico_id', 'usuarios', 'id', 'SET NULL', 'RESTRICT');
+        $this->forge->addForeignKey('tecnico_id', 'usuarios', 'id', 'SET NULL', 'SET NULL');
+        // AGREGAR FOREIGN KEYS - prueba
+        $this->forge->addForeignKey('marca_id', 'marcas', 'id', 'SET NULL', 'SET NULL');
+        $this->forge->addForeignKey('modelo_id', 'modelos', 'id', 'SET NULL', 'SET NULL');
+
+        // FOREIGN KEY para prioridad -prueba
+        $this->forge->addForeignKey('prioridad_dispositivo_id', 'urgencias', 'id', 'SET NULL', 'SET NULL');
+
+
         $this->forge->createTable('dispositivos');
+
+
+        // AGREGAR ÍNDICES para optimizar búsquedas . PRUEBA
+        $this->db->query('CREATE INDEX idx_garantia_activa ON dispositivos(tiene_garantia_activa, garantia_vence_en)');
+        $this->db->query('CREATE INDEX idx_estado_diagnostico ON dispositivos(estado_diagnostico)');
+        $this->db->query('CREATE INDEX idx_fecha_estimada ON dispositivos(fecha_estimada_entrega)');
     }
 
     public function down()

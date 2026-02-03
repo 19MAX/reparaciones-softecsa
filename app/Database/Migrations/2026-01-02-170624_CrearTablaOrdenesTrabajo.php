@@ -21,62 +21,46 @@ class CrearTablaOrdenesTrabajo extends Migration
             ],
             'cliente_id' => [
                 'type' => 'INT',
-                'unsigned' => true
+                'unsigned' => true,
+                'comment' => 'Cliente al que pertenece la orden',
             ],
             'usuario_id' => [
                 'type' => 'INT',
-                'unsigned' => true
-            ],
-            'tecnico_id' => [
-                'type' => 'INT',
                 'unsigned' => true,
-                'null' => true
+                'comment' => 'Usuario que crea la orden',
             ],
             'urgencia_id' => [
                 'type' => 'INT',
                 'unsigned' => true,
-                'null' => true
+                'null' => true,
+                'comment' => 'Nivel de urgencia de la orden',
             ],
-            'mano_obra' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0
+            // PRUEBA
+            'fecha_estimada_entrega' => [
+                'type' => 'DATE',
+                'null' => true,
             ],
-            'valor_repuestos' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0
+            'estado_global' => [
+                'type' => 'ENUM',
+                'constraint' => ['pendiente', 'en_proceso', 'en_evaluacion', 'finalizada', 'entregada', 'cancelada'],
+                'default' => 'pendiente',
             ],
-            'valor_revision' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0,
+            'observaciones_generales' => [
+                'type' => 'TEXT',
+                'null' => true,
+                'comment' => 'Observaciones generales sobre la orden',
             ],
-            'mano_obra_aproximado' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0,
+            'es_reclamo_garantia' => [
+                'type' => 'BOOLEAN',
+                'default' => false,
             ],
-            'repuestos_aproximado' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0,
-            ],
-            'total' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0,
-            ],
-            'abono' => [
-                'type' => 'DECIMAL',
-                'constraint' => '10,2',
-                'default' => 0
-            ],
-            'estado' => [
-                'type' => 'TINYINT',
+            'orden_original_id' => [
+                'type' => 'INT',
+                'constraint' => 11,
                 'unsigned' => true,
-                'default' => 1
+                'null' => true,
             ],
+            // ---
             'created_at' => [
                 'type' => 'DATETIME'
             ],
@@ -87,8 +71,12 @@ class CrearTablaOrdenesTrabajo extends Migration
         // LLAVES FORÁNEAS
         $this->forge->addForeignKey('cliente_id', 'clientes', 'id', 'CASCADE', 'RESTRICT');
         $this->forge->addForeignKey('usuario_id', 'usuarios', 'id', 'CASCADE', 'RESTRICT');
-        $this->forge->addForeignKey('tecnico_id', 'usuarios', 'id', 'SET NULL', 'RESTRICT');
+        // $this->forge->addForeignKey('tecnico_id', 'usuarios', 'id', 'SET NULL', 'RESTRICT');
         $this->forge->addForeignKey('urgencia_id', 'urgencias', 'id', 'SET NULL', 'RESTRICT');
+
+        // PRUEBA
+        $this->forge->addForeignKey('orden_original_id', 'ordenes_trabajo', 'id', 'SET NULL', 'CASCADE', 'ordenes_trabajo');
+
 
         $this->forge->createTable('ordenes_trabajo');
     }

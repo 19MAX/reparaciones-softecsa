@@ -37,6 +37,21 @@ class CrearTablaUrgencias extends Migration
                 'type' => 'BOOLEAN',
                 'default' => true
             ],
+            //prueba
+            'color_hex' => [
+                'type' => 'VARCHAR',
+                'constraint' => 7,
+                'default' => '#6c757d',
+                'after' => 'nombre',
+                'comment' => 'Color para UI (ej: #ff0000)',
+            ],
+            'orden_prioridad' => [
+                'type' => 'INT',
+                'constraint' => 11,
+                'default' => 0,
+                'after' => 'color_hex',
+                'comment' => 'Para ordenar (menor = más urgente)',
+            ],
             'created_at' => [
                 'type' => 'DATETIME'
             ],
@@ -44,6 +59,8 @@ class CrearTablaUrgencias extends Migration
 
         $this->forge->addPrimaryKey('id');
         $this->forge->createTable('urgencias');
+        $this->db->query('CREATE INDEX idx_orden_prioridad ON urgencias(orden_prioridad)');
+
     }
 
     public function down()

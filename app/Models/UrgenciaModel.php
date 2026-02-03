@@ -43,4 +43,11 @@ class UrgenciaModel extends Model
     protected $afterFind      = [];
     protected $beforeDelete   = [];
     protected $afterDelete    = [];
+
+    public function getUrgenciasActivas()
+    {
+        return $this->where('activo', 1)
+            ->orderBy('orden_prioridad', 'ASC')
+            ->findAll();
+    }
 }
