@@ -11,22 +11,8 @@ class UsuarioModel extends Model
     protected $useAutoIncrement = true;
     protected $returnType = 'array';
     protected $useSoftDeletes = false;
-    protected $protectFields = true;
-    protected $allowedFields = [
-        'cedula',
-        'nombres',
-        'apellidos',
-        'password',
-        'role',
-        'tipo_comision',
-        'valor_comision',
-        'estado',
-        'foto_perfil',
-        'ruta_firma',
-        'created_by',
-        'updated_by',
-        'deleted_by'
-    ];
+    protected $protectFields = false;
+    protected $allowedFields = [];
 
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;
