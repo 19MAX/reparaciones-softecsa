@@ -14,11 +14,11 @@ class UsersSeeder extends Seeder
 
         $data = [
             'cedula' => '0000000000',
-            'nombres' => 'Admin',
-            'apellidos' => 'Sistema',
+            'nombre' => 'Admin',
+            'apellido' => 'Sistema',
             'password' => $adminPassword,
-            'role' => 'admin',
-            'estado' => 'activo'
+            'rol' => 'admin',
+            'activo' => 1
         ];
 
         $model->insert($data);

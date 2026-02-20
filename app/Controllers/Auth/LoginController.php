@@ -79,10 +79,10 @@ class LoginController extends BaseController
         }
 
         // 3. Verificar Estado (activo/inactivo/suspendido)
-        if ($usuario['estado'] !== 'activo') {
+        if ($usuario['activo'] != 1) {
             return $this->response->setJSON([
                 'status' => 'error',
-                'message' => 'Tu cuenta está ' . $usuario['estado'] . '. Contacta al administrador.',
+                'message' => 'Tu cuenta está inactiva. Contacta al administrador.',
                 'token' => csrf_hash()
             ]);
         }
@@ -90,16 +90,15 @@ class LoginController extends BaseController
         // 4. Todo OK: Crear Sesión
         session()->set([
             'id_usuario' => $usuario['id'],
-            'nombres' => $usuario['nombres'],
-            'apellidos' => $usuario['apellidos'],
-            'role' => $usuario['role'],
-            'foto' => $usuario['foto_perfil'],
+            'nombres' => $usuario['nombre'],
+            'apellidos' => $usuario['apellido'],
+            'role' => $usuario['rol'],
             'isLoggedIn' => true
         ]);
 
         // Determinar redirect según rol
         $redirectUrl = 'admin/dashboard'; // Default
-        switch ($usuario['role']) {
+        switch ($usuario['rol']) {
             case 'admin':
                 $redirectUrl = 'admin/dashboard';
                 break;
