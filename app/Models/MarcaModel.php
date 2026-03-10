@@ -43,4 +43,30 @@ class MarcaModel extends Model
     protected $afterFind      = [];
     protected $beforeDelete   = [];
     protected $afterDelete    = [];
+
+
+    public function buscar($query = '', $tipoId = '')
+    {
+        $builder = $this->builder();
+
+        $builder->where('activo', 1);
+
+        if (!empty($tipoId)) {
+            $builder->where('tipo_dispositivo_id', $tipoId);
+        }
+
+        if (!empty($query)) {
+            $builder->groupStart()
+                ->like('nombre', $query)
+                ->groupEnd();
+        }
+
+        return $builder->limit(50)->get()->getResultArray();
+    }
+
+    public function crear(array $data)
+    {
+        $this->insert($data);
+        return $this->getInsertID();
+    }
 }

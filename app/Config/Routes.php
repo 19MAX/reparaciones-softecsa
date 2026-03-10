@@ -42,6 +42,7 @@ $routes->group('admin', function (RouteCollection $routes) {
         $routes->post('guardar', 'Admin\OrdenController::guardar');
         $routes->get('imprimir/(:num)', 'Admin\OrdenController::imprimir/$1');
         $routes->get('entregar/(:num)', 'Admin\OrdenController::entregar/$1');
+        $routes->get('dispositivos/(:num)', 'Admin\OrdenController::getDispositivosOrden/$1');
     });
     $routes->group('checklist', function ($routes) {
         $routes->get('listar', 'Admin\ChecklistController::listar'); // Para fetchTopChecks
@@ -122,4 +123,34 @@ $routes->group('tecnico', function ($routes) {
 
     // Ingresos
     $routes->get('ingresos', 'Tecnico\IngresosController::index');
+});
+//Rutas de consulta global con autenticación
+//TODO: AGREGAR FILTRO DE AUTENTICACIÓN
+$routes->group('global', function ($routes) {
+
+    // Obtener marcas y modelos (AJAX)
+    $routes->get('get-marcas-por-tipo/(:num)', 'GlobalController::getMarcasPorTipoGlobal/$1');
+    $routes->get('get-modelos-por-marca/(:num)', 'GlobalController::getModelosPorMarcaGlobal/$1');
+    //Crear marcas y modelos
+    $routes->post('crear-marca', 'GlobalController::crearMarca');
+    $routes->post('crear-modelo', 'GlobalController::crearModelo');
+    //Buscar marcas y modelos
+    $routes->get('buscar-marcas', 'GlobalController::buscarMarcas');
+    $routes->get('buscar-modelos', 'GlobalController::buscarModelos');
+
+
+    // Rutas para Accesorios
+    $routes->get('buscar-accesorios', 'GlobalController::buscarAccesorios');
+    $routes->post('crear-accesorio', 'GlobalController::crearAccesorio');
+
+    // Rutas para detalles
+    $routes->get('buscar-detalles', 'GlobalController::buscarDetalles');
+    $routes->post('crear-detalles', 'GlobalController::crearDetalles');
+
+    // Problemas comunes
+    $routes->get('buscar-problemas-comunes', 'GlobalController::buscarProblemasComunes');
+    $routes->post('crear-problema-comun', 'GlobalController::crearProblemasComun');
+    $routes->post('registrar-uso-problema', 'GlobalController::registrarUsoProblema');
+
+    $routes->get('dispositivos/(:num)', 'GlobalController::obtenerDispositivos/$1');
 });

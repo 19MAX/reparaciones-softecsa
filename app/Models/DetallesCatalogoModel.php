@@ -43,4 +43,39 @@ class DetallesCatalogoModel extends Model
     protected $afterFind      = [];
     protected $beforeDelete   = [];
     protected $afterDelete    = [];
+
+    public function buscarParaTomSelect(?int $tipoId, string $query): array
+    {
+        $builder = $this->builder()
+            ->select('id, nombre')
+            ->where('activo', 1);
+
+        if ($tipoId) {
+            $builder->groupStart()
+                ->where('tipo_dispositivo_id', $tipoId)
+                ->orWhere('tipo_dispositivo_id IS NULL', null, false)
+                ->groupEnd();
+        } else {
+            $builder->where('tipo_dispositivo_id IS NULL', null, false);
+        }
+
+        if (strlen($query) >= 2) {
+            $builder->like('nombre', $query);
+        }
+
+        return $builder
+            ->orderBy('CASE WHEN tipo_dispositivo_id = ' . (int)$tipoId . ' THEN 0 ELSE 1 END', 'ASC', false)
+            ->orderBy('nombre', 'ASC')
+            ->limit(20)
+            ->get()
+            ->getResultArray();
+    }
+
+    public function buscarActivoPorNombre(string $nombre)
+    {
+        return $this->where([
+            'nombre' => $nombre,
+            'activo' => 1
+        ])->first();
+    }
 }

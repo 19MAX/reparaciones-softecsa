@@ -45,6 +45,8 @@
 <!-- SWEETALERT2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="<?= base_url('assets/js/sweetalert2.js') ?>"></script>
+<!-- TOM SELECT -->
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/js/tom-select.complete.min.js"></script>
 
 <script>
 

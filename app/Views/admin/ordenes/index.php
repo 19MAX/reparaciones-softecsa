@@ -48,7 +48,6 @@
                                 <th>Fecha</th>
                                 <th>Cliente</th>
                                 <th>Dispositivos</th>
-                                <th>Prioridad</th>
                                 <th>Estado</th>
                                 <th style="width: 10%">Acciones</th>
                             </tr>
@@ -59,7 +58,10 @@
                                 <?php foreach ($ordenes as $orden): ?>
                                     <tr>
                                         <td class="fw-bold text-primary">
-                                            <?= esc($orden['codigo_orden']) ?>
+                                            <a href="<?= base_url('consulta/orden/' . $orden['numero_orden']) ?>"
+                                                data-bs-toggle="tooltip" title="Ver Seguimiento Público">
+                                                <?= esc($orden['numero_orden']) ?>
+                                            </a>
                                         </td>
                                         <td>
                                             <?= formatear_fecha($orden['created_at'], 'solo_fecha') ?>
@@ -70,20 +72,19 @@
                                         </td>
                                         <td>
                                             <div class="fw-bold">
-                                                <?= esc($orden['nombres']) ?> <?= esc($orden['apellidos']) ?>
+                                                <?= esc($orden['nombres']) ?>         <?= esc($orden['apellidos']) ?>
                                             </div>
                                         </td>
-                                        <td>
-                                            <span class="d-inline-block text-truncate" style="max-width: 200px;"
-                                                title="<?= esc($orden['equipos_resumen']) ?>">
-                                                <?= esc($orden['equipos_resumen']) ?>
-                                            </span>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-info btn-ver-dispositivos"
+                                                data-id="<?= $orden['id'] ?>" data-bs-toggle="modal"
+                                                data-bs-target="#dispositivosModal">
+                                                <?= $orden['total_dispositivos'] ?>
+                                                <i class="fas fa-eye ms-1"></i>
+                                            </button>
                                         </td>
                                         <td>
-                                            <?=get_badge_urgencia($orden)?>
-                                        </td>
-                                        <td>
-                                            <?=get_badge_estado_orden($orden['estado'])?>
+                                            <?= $orden['estado'] ?>
                                         </td>
                                         <td>
                                             <div class="form-button-action">
@@ -91,14 +92,6 @@
                                                     target="_blank" class="btn btn-link btn-secondary" data-bs-toggle="tooltip"
                                                     title="Imprimir Ticket">
                                                     <i class="fas fa-print"></i>
-                                                </a>
-
-                                                <!-- Enlace para ver el seguimiento público: -->
-
-                                                <a href="<?= base_url('consulta/orden/' . $orden['codigo_orden']) ?>"
-                                                    target="_blank" class="btn btn-link btn-info" data-bs-toggle="tooltip"
-                                                    title="Ver Seguimiento Público">
-                                                    <i class="fas fa-truck-moving"></i>
                                                 </a>
 
 
@@ -130,7 +123,50 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="dispositivosModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
 
+            <div class="modal-header bg-info">
+                <h5 class="modal-title text-white fw-bold">
+                    Dispositivos de la Orden
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Dispositivo</th>
+                                <th>Estado</th>
+                                <th>Fecha Entrega</th>
+                                <th>Precio</th>
+                                <th style="width:120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-dispositivos-body">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    Cargando dispositivos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -146,7 +182,7 @@
             order: [[1, 'desc']],
             layout: {
                 topStart: {
-                    buttons: ['pageLength','copy', 'excel', 'pdf', 'colvis']
+                    buttons: ['pageLength', 'copy', 'excel', 'pdf', 'colvis']
                 }
             }
         });
@@ -171,6 +207,105 @@
                 }
             })
         });
+
+        const tablaBody = document.getElementById('tabla-dispositivos-body');
+
+    document.querySelectorAll('.btn-ver-dispositivos').forEach(btn => {
+
+        btn.addEventListener('click', function () {
+
+            const ordenId = this.dataset.id;
+
+            tablaBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">
+                        Cargando dispositivos...
+                    </td>
+                </tr>
+            `;
+
+            fetch(`<?= base_url('admin/ordenes/dispositivos') ?>/${ordenId}`)
+                .then(response => response.json())
+                .then(data => {
+
+                    if (!data.success) {
+                        tablaBody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="text-center text-danger">
+                                    ${data.message}
+                                </td>
+                            </tr>
+                        `;
+                        return;
+                    }
+
+                    if (data.dispositivos.length === 0) {
+                        tablaBody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    No hay dispositivos registrados.
+                                </td>
+                            </tr>
+                        `;
+                        return;
+                    }
+
+                    let filas = '';
+
+                    data.dispositivos.forEach((d, index) => {
+
+                        const fechaEntrega = d.fecha_real_entrega 
+                            ? d.fecha_real_entrega 
+                            : (d.fecha_estimada_entrega ?? '-');
+
+                        filas += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>
+                                    <strong>${d.tipo_dispositivo}</strong><br>
+                                    <small class="text-muted">
+                                        ${d.marca} ${d.modelo ?? ''}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">
+                                        ${d.estado}
+                                    </span>
+                                </td>
+                                <td>
+                                    ${fechaEntrega ?? '-'}
+                                </td>
+                                <td>
+                                    $ ${parseFloat(d.precio_total).toFixed(2)}
+                                </td>
+                                <td class="text-center">
+                                    <a href="<?= base_url('admin/dispositivos/detalle') ?>/${d.id}" 
+                                       class="btn btn-sm btn-outline-primary"
+                                       title="Ver Detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    tablaBody.innerHTML = filas;
+
+                })
+                .catch(error => {
+                    tablaBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center text-danger">
+                                Error al cargar los dispositivos.
+                            </td>
+                        </tr>
+                    `;
+                    console.error(error);
+                });
+
+        });
+
+    });
     });
 </script>
 <?= $this->endSection() ?>

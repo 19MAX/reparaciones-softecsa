@@ -4,9 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class OrdenTrabajoModel extends Model
+class DispositivoProblemaModel extends Model
 {
-    protected $table            = 'ordenes_trabajo';
+    protected $table            = 'dispositivo_problemas';
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
@@ -34,7 +34,7 @@ class OrdenTrabajoModel extends Model
     protected $cleanValidationRules = true;
 
     // Callbacks
-    protected $allowCallbacks = false;
+    protected $allowCallbacks = true;
     protected $beforeInsert   = [];
     protected $afterInsert    = [];
     protected $beforeUpdate   = [];
