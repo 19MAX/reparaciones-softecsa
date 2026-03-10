@@ -44,6 +44,12 @@ $routes->group('admin', function (RouteCollection $routes) {
         $routes->get('entregar/(:num)', 'Admin\OrdenController::entregar/$1');
         $routes->get('dispositivos/(:num)', 'Admin\OrdenController::getDispositivosOrden/$1');
     });
+
+    $routes->get('dispositivos/detalle/(:num)', 'Admin\DispositivoController::detalleDispositivo/$1');
+
+    $routes->post('dispositivos/reparacion/iniciar', 'Admin\DispositivoController::iniciarReparacion');
+    $routes->post('dispositivos/reparacion/finalizar', 'Admin\DispositivoController::finalizarReparacion');
+
     $routes->group('checklist', function ($routes) {
         $routes->get('listar', 'Admin\ChecklistController::listar'); // Para fetchTopChecks
         $routes->get('buscar', 'Admin\ChecklistController::buscar'); // Para searchChecks
