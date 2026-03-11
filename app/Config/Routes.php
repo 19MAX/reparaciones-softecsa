@@ -82,6 +82,22 @@ $routes->group('admin', function (RouteCollection $routes) {
         $routes->post('eliminar', 'Admin\UrgenciaController::eliminar');
     });
 
+    $routes->group('problemas', function ($routes) {
+        $routes->get('/', 'Admin\ProblemasController::index');
+        $routes->post('crear', 'Admin\ProblemasController::crear');
+        $routes->post('editar', 'Admin\ProblemasController::editar');
+        $routes->post('eliminar', 'Admin\ProblemasController::eliminar');
+
+        // Precios por modelo (AJAX)
+        $routes->get('precios-modelo/(:num)', 'Admin\ProblemasController::getPreciosModelo/$1');
+        $routes->post('guardar-precio-modelo', 'Admin\ProblemasController::guardarPrecioModelo');
+        $routes->post('eliminar-precio-modelo', 'Admin\ProblemasController::eliminarPrecioModelo');
+
+        // Cascading selects (AJAX)
+        $routes->get('marcas-por-tipo/(:num)', 'Admin\ProblemasController::getMarcasPorTipo/$1');
+        $routes->get('modelos-por-marca/(:num)', 'Admin\ProblemasController::getModelosPorMarca/$1');
+    });
+
     $routes->group('horarios-atencion', function ($routes) {
         $routes->get('/', 'Admin\HorarioAtencionController::index');
         $routes->post('crear', 'Admin\HorarioAtencionController::crear');

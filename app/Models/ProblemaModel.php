@@ -137,4 +137,25 @@ class ProblemaModel extends Model
             'activo' => 1
         ])->first();
     }
+
+    /**
+     * Obtener problemas con tipo de dispositivo y precio base genérico
+     */
+    public function getProblemasConPrecios(): array
+    {
+        return $this->db->table('problemas p')
+            ->select([
+                'p.*',
+                'td.nombre AS tipo_dispositivo_nombre',
+                'pb.id AS precio_base_id',
+                'pb.precio_mano_obra',
+                'pb.precio_repuesto',
+            ], false)
+            ->join('tipos_dispositivo td', 'td.id = p.tipo_dispositivo_id', 'left')
+            ->join('precios_base pb', 'pb.problema_id = p.id AND pb.modelo_id IS NULL', 'left', false)
+            ->orderBy('td.nombre', 'ASC')
+            ->orderBy('p.nombre', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
 }
