@@ -43,4 +43,9 @@ class ConfiguracionModel extends Model
     protected $afterFind      = [];
     protected $beforeDelete   = [];
     protected $afterDelete    = [];
+
+    public function getConfig()
+    {
+        return $this->first();
+    }
 }

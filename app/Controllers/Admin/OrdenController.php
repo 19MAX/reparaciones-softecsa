@@ -483,250 +483,169 @@ class OrdenController extends BaseController
         return $fechaActual->format('Y-m-d H:i:s');
     }
 
-    // public function imprimir($id)
-    // {
-    //     // 1. CARGAR MODELOS
-    //     $ordenModel = new OrdenTrabajoModel();
-    //     $dispositivoModel = new DispositivoModel(); // Asegúrate de tener este modelo
-    //     $urgenciaModel = new \App\Models\UrgenciaModel();
-    //     $configuracionModel = new ConfiguracionModel();
-    //     $terminosModel = new \App\Models\TerminosCondicionesModel(); // <--- NUEVO
-
-    //     // 2. OBTENER DATOS DE LA ORDEN
-    //     $orden = $ordenModel->select('ordenes_trabajo.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula, u.nombre as nombre_urgencia')
-    //         ->join('clientes as c', 'c.id = ordenes_trabajo.cliente_id')
-    //         ->join('urgencias as u', 'u.id = ordenes_trabajo.urgencia_id', 'left')
-    //         ->where('ordenes_trabajo.id', $id)
-    //         ->first();
-
-    //     if (!$orden) {
-    //         return redirect()->back()->with('error', 'Orden no encontrada');
-    //     }
-
-    //     $urgencias = $urgenciaModel->where('activo', 1)->orderBy('recargo', 'ASC')->findAll();
-
-    //     // 3. OBTENER DISPOSITIVOS
-    //     $dispositivos = $dispositivoModel->select('dispositivos.*, td.nombre as nombre_tipo, td.icono')
-    //         ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left')
-    //         ->where('orden_id', $id)
-    //         ->findAll();
-
-    //     // ---------------------------------------------------------
-    //     // LOGICA DE TÉRMINOS Y CONDICIONES ACUMULATIVOS
-    //     // ---------------------------------------------------------
-
-    //     // A. Extraemos los IDs de los tipos de dispositivo presentes en la orden
-    //     // Ejemplo: Si hay 2 celulares y 1 laptop, esto devuelve [1, 2] (sin repetir)
-    //     $tiposIds = [];
-    //     foreach ($dispositivos as $disp) {
-    //         // Asumo que agregaste la columna 'tipo_dispositivo_id' en la tabla dispositivos
-    //         // Si tu columna se llama diferente, cámbialo aquí.
-    //         if (!empty($disp['tipo_dispositivo_id'])) {
-    //             $tiposIds[] = $disp['tipo_dispositivo_id'];
-    //         }
-    //     }
-    //     $tiposIds = array_unique($tiposIds); // Eliminar duplicados de IDs
-
-    //     // B. Construimos la consulta "Inteligente"
-    //     // Queremos: (Activos) Y (Sean Generales O Sean de los Tipos encontrados)
-    //     $builder = $terminosModel->builder();
-    //     $builder->where('activo', 1);
-
-    //     $builder->groupStart();
-    //     $builder->where('tipo_dispositivo_id', null); // Términos Generales
-
-    //     if (!empty($tiposIds)) {
-    //         $builder->orWhereIn('tipo_dispositivo_id', $tiposIds); // Términos específicos
-    //     }
-    //     $builder->groupEnd();
-
-    //     // ORDEN: primero generales (NULL), luego específicos
-    //     $builder->orderBy('tipo_dispositivo_id IS NOT NULL', 'ASC', false);
-    //     $terminos = $builder->get()->getResultArray();
-
-    //     // ---------------------------------------------------------
-
-    //     // 4. GENERAR EL QR
-    //     $urlSeguimiento = base_url("consulta/orden/" . $orden['codigo_orden']);
-    //     $builderQr = new Builder(
-    //         writer: new PngWriter(),
-    //         writerOptions: [],
-    //         validateResult: false,
-    //         data: $urlSeguimiento,
-    //         encoding: new Encoding('UTF-8'),
-    //         size: 100,
-    //         margin: 0
-    //     );
-    //     $qrCodeBase64 = $builderQr->build()->getDataUri();
-
-    //     // 5. CONFIGURACIÓN EMPRESA
-    //     $configuracion = $configuracionModel->first();
-    //     $rutaLogo = FCPATH . 'assets/img/logo.png'; // Ajusta si es necesario
-
-    //     // 6. PREPARAR DATOS VISTA
-    //     $data = [
-    //         'orden' => $orden,
-    //         'urgencias' => $urgencias,
-    //         'dispositivos' => $dispositivos,
-    //         'qr_code' => $qrCodeBase64,
-    //         'logo_path' => $configuracion['logo_path'] ?? "",
-    //         'nombre_empresa' => $configuracion['nombre_empresa'] ?? 'Mi Empresa',
-    //         'telefono_empresa' => $configuracion['telefono'] ?? '',
-    //         'direccion_empresa' => $configuracion['direccion'] ?? '',
-    //         'email_empresa' => isset($configuracion['email']) ? $configuracion['email'] : '', // Validación extra
-    //         'terminos' => $terminos // <--- PASAMOS LOS TÉRMINOS FILTRADOS
-    //     ];
-
-    //     // 7. RENDERIZAR PDF
-    //     $options = new Options();
-    //     $options->set('isRemoteEnabled', true);
-    //     $options->set('isHtml5ParserEnabled', true);
-    //     $options->set('chroot', FCPATH);
-
-    //     $dompdf = new Dompdf($options);
-    //     $html = view('admin/ordenes/pdf_template', $data);
-    //     $dompdf->loadHtml($html);
-    //     $dompdf->setPaper('A4', 'landscape'); // O 'portrait' si prefieres vertical
-    //     $dompdf->render();
-
-    //     return $dompdf->stream("Orden_" . $orden['codigo_orden'] . ".pdf", ["Attachment" => false]);
-    // }
-
-    public function entregar($id)
+    public function imprimir(int $ordenId)
     {
         $db = \Config\Database::connect();
-        $usuarioId = session()->get('id_usuario');
 
-        try {
-            // Obtener orden
-            $orden = $this->ordenModel->find($id);
+        // ── 1. Orden + cliente ────────────────────────────────────────
+        $orden = $db->table('ordenes o')
+            ->select([
+                'o.id',
+                'o.numero_orden',
+                'o.estado',
+                'o.observaciones_generales',
+                'o.created_at AS fecha_ingreso',
+                'c.nombres    AS cliente_nombre',
+                'c.telefono   AS cliente_telefono',
+                'c.email      AS cliente_email',
+                'c.cedula AS cliente_cedula',
+                'u.nombre     AS recepcionista',
+            ])
+            ->join('clientes c', 'c.id = o.cliente_id')
+            ->join('usuarios u', 'u.id = o.usuario_recepcion_id')
+            ->where('o.id', $ordenId)
+            ->get()->getRowArray();
 
-            if (!$orden) {
-                return redirect()->back()->with('error', 'Orden no encontrada');
-            }
-
-            // Validar que la orden no esté ya entregada
-            if ($orden['estado'] === 'entregado') {
-                return redirect()->back()->with('error', 'Esta orden ya fue entregada');
-            }
-
-            // Obtener dispositivos de la orden
-            $dispositivos = $this->dispositivosOrdenModel
-                ->select('dispositivos.*, 
-                          u.tipo_comision,
-                          u.valor_comision')
-                ->join('usuarios as u', 'u.id = dispositivos.tecnico_id', 'left')
-                ->where('dispositivos.orden_id', $id)
-                ->findAll();
-
-            if (empty($dispositivos)) {
-                return redirect()->back()->with('error', 'La orden no tiene dispositivos');
-            }
-
-            // VALIDACIÓN: Todos los dispositivos deben estar en "listo_retiro"
-            $dispositivosNoListos = 0;
-            foreach ($dispositivos as $disp) {
-                if ($disp['estado_reparacion'] !== 'listo_retiro') {
-                    $dispositivosNoListos++;
-                }
-            }
-
-            if ($dispositivosNoListos > 0) {
-                return redirect()->back()->with(
-                    'error',
-                    "No se puede entregar. Hay {$dispositivosNoListos} dispositivo(s) que no están en estado 'Listo para Retiro'"
-                );
-            }
-
-            // Calcular totales sumando de los dispositivos
-            $manoObraTotal = 0;
-            $repuestosTotal = 0;
-            $gananciaTotalTecnicos = 0;
-            $tecnicosGanancias = [];
-
-            foreach ($dispositivos as $dispositivo) {
-                // Sumar costos
-                $manoObraTotal += (float) ($dispositivo['mano_obra'] ?? 0);
-                $repuestosTotal += (float) ($dispositivo['valor_repuestos'] ?? 0);
-
-                // Calcular ganancia por técnico si tiene asignado
-                if (!empty($dispositivo['tecnico_id']) && !empty($dispositivo['tipo_comision'])) {
-                    $ganancia = 0;
-
-                    if ($dispositivo['tipo_comision'] === 'porcentaje') {
-                        // Porcentaje de la mano de obra DE ESTE DISPOSITIVO
-                        $ganancia = (float) (($dispositivo['mano_obra'] * $dispositivo['valor_comision']) / 100);
-                    } else {
-                        // Monto fijo por dispositivo
-                        $ganancia = (float) $dispositivo['valor_comision'];
-                    }
-
-                    $gananciaTotalTecnicos += $ganancia;
-
-                    // Acumular por técnico
-                    if (!isset($tecnicosGanancias[$dispositivo['tecnico_id']])) {
-                        $tecnicosGanancias[$dispositivo['tecnico_id']] = 0;
-                    }
-                    $tecnicosGanancias[$dispositivo['tecnico_id']] += $ganancia;
-                }
-            }
-
-            // Obtener valor de revisión y urgencia
-            $configuracionModel = new \App\Models\ConfiguracionModel();
-            $configuracion = $configuracionModel->first();
-            $valorRevision = (float) ($configuracion['valor_revision'] ?? 0);
-
-            $recargoUrgencia = 0;
-            if ($orden['urgencia_id']) {
-                $urgenciaModel = new \App\Models\UrgenciaModel();
-                $urgencia = $urgenciaModel->find($orden['urgencia_id']);
-                $recargoUrgencia = (float) ($urgencia['recargo'] ?? 0);
-            }
-
-            // Calcular total final
-            $totalFinal = $manoObraTotal + $repuestosTotal + $valorRevision + $recargoUrgencia;
-
-            $db->transStart();
-
-            // 1. Actualizar orden de trabajo con totales
-            $this->ordenModel->update($id, [
-                'mano_obra' => $manoObraTotal,
-                'valor_repuestos' => $repuestosTotal,
-                'total' => $totalFinal,
-                'estado' => 'entregado',
-                'updated_at' => date('Y-m-d H:i:s'),
-                'updated_by' => $usuarioId
-            ]);
-
-            // 2. Crear registro en ordenes_finalizadas (versión simplificada)
-            $db->table('ordenes_finalizadas')->insert([
-                'orden_id' => $id,
-                'fecha_finalizacion' => date('Y-m-d H:i:s'),
-                'mano_obra_total' => $manoObraTotal,
-                'repuestos_total' => $repuestosTotal,
-                'total' => $totalFinal,
-                'ganancia_total_tecnicos' => $gananciaTotalTecnicos,
-                'created_at' => date('Y-m-d H:i:s')
-            ]);
-
-            $db->transComplete();
-
-            if ($db->transStatus() === false) {
-                throw new \Exception('Error al procesar la entrega');
-            }
-
-            // Mensaje con detalle de ganancias
-            $mensajeGanancias = "Ganancias registradas: $" . number_format($gananciaTotalTecnicos, 2);
-            if (count($tecnicosGanancias) > 0) {
-                $mensajeGanancias .= " (" . count($tecnicosGanancias) . " técnico(s))";
-            }
-
-            return redirect()->to(base_url('admin/ordenes'))
-                ->with('success', "Orden entregada exitosamente. Total: $" . number_format($totalFinal, 2) . ". " . $mensajeGanancias);
-
-        } catch (\Exception $e) {
-            log_message('error', '[Admin/OrdenController::entregar] ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Error al entregar la orden: ' . $e->getMessage());
+        if (!$orden) {
+            return redirect()->to(base_url('ordenes'))
+                ->with('error', 'Orden no encontrada.');
         }
+
+        // ── 2. Dispositivos de la orden ───────────────────────────────
+        $dispositivos = $db->table('dispositivos_orden do')
+            ->select([
+                'do.id',
+                'do.estado',
+                'do.serie_imei',
+                'do.tipo_seguridad',
+                'do.relato_cliente',
+                'do.precio_total',
+                'do.costo_prioridad',
+                'do.tiempo_total_horas',
+                'do.fecha_estimada_entrega',
+                'do.fecha_real_entrega',
+                'do.created_at             AS fecha_ingreso',
+                'td.nombre                 AS tipo_dispositivo',
+                'm.nombre                  AS marca',
+                'COALESCE(mo.nombre, do.modelo_texto) AS modelo',
+                'pr.nombre                 AS prioridad',
+                'pr.color_badge            AS prioridad_color',
+                'u.nombre                  AS tecnico',
+            ])
+            ->join('tipos_dispositivo td', 'td.id = do.tipo_dispositivo_id')
+            ->join('marcas m', 'm.id  = do.marca_id')
+            ->join('modelos mo', 'mo.id = do.modelo_id', 'left')
+            ->join('prioridades pr', 'pr.id = do.prioridad_id', 'left')
+            ->join('usuarios u', 'u.id  = do.tecnico_id', 'left')
+            ->where('do.orden_id', $ordenId)
+            ->orderBy('do.id', 'ASC')
+            ->get()->getResultArray();
+
+        // ── 3. Enriquecer cada dispositivo con sus relaciones ─────────
+        foreach ($dispositivos as &$dev) {
+            $devId = $dev['id'];
+
+            // Problemas con precios
+            $dev['problemas'] = $db->table('dispositivo_problemas dp')
+                ->select([
+                    'p.nombre                                      AS problema',
+                    'dp.precio_mano_obra',
+                    'dp.precio_repuesto',
+                    '(dp.precio_mano_obra + dp.precio_repuesto)   AS subtotal',
+                    'dp.observacion',
+                ])
+                ->join('problemas p', 'p.id = dp.problema_id')
+                ->where('dp.dispositivo_orden_id', $devId)
+                ->get()->getResultArray();
+
+            // Accesorios
+            $dev['accesorios'] = $db->table('dispositivo_accesorios da')
+                ->select('COALESCE(ac.nombre, da.accesorio_texto) AS accesorio, da.cantidad')
+                ->join('accesorios_catalogo ac', 'ac.id = da.accesorio_id', 'left')
+                ->where('da.dispositivo_orden_id', $devId)
+                ->get()->getResultArray();
+
+            // Detalles físicos
+            $dev['detalles'] = $db->table('dispositivo_detalles dd')
+                ->select('COALESCE(dc.nombre, dd.detalle_texto) AS detalle')
+                ->join('detalles_catalogo dc', 'dc.id = dd.detalle_id', 'left')
+                ->where('dd.dispositivo_orden_id', $devId)
+                ->get()->getResultArray();
+        }
+        unset($dev);
+
+        // ── 4. Configuración de empresa ───────────────────────────────
+        $empresaConfig = model('ConfiguracionModel')->getConfig();
+
+        // ── 5. QR Code con el número de orden ─────────────────────────
+        // Requiere: composer require endroid/qr-code
+        $qrCodeBase64 = '';
+
+
+
+        // 4. GENERAR EL QR
+        $urlSeguimiento = base_url("consulta/orden/" . $orden['numero_orden']);
+        $builderQr = new Builder(
+            writer: new PngWriter(),
+            writerOptions: [],
+            validateResult: false,
+            data: $urlSeguimiento,
+            encoding: new Encoding('UTF-8'),
+            size: 100,
+            margin: 0
+        );
+        $qrCodeBase64 = $builderQr->build()->getDataUri();
+
+        // ── 6. Términos y condiciones desde configuración ─────────────
+        // Se espera un array de strings, uno por ítem de la lista.
+        // Puedes guardarlos en configuracion como JSON o en una tabla aparte.
+        // Ejemplo desde configuracion (campo terminos_condiciones TEXT con JSON):
+        $terminos = [];
+        if (!empty($empresaConfig['terminos_condiciones'])) {
+            $decoded = json_decode($empresaConfig['terminos_condiciones'], true);
+            $terminos = is_array($decoded) ? $decoded : [];
+        }
+
+        // Términos por defecto si no hay ninguno configurado
+        if (empty($terminos)) {
+            $terminos = [
+                'El taller no se hace responsable por daños preexistentes no reportados al momento del ingreso del equipo.',
+                'El cliente debe retirar su equipo dentro de los 30 días posteriores a la notificación de reparación completada.',
+                'Los equipos no retirados en el plazo indicado podrán generar costos de almacenamiento.',
+                'El presupuesto aprobado incluye únicamente los trabajos descritos en esta orden. Cualquier trabajo adicional requerirá autorización del cliente.',
+                'El taller no se responsabiliza por la pérdida de datos. Se recomienda realizar respaldos antes del ingreso.',
+                'La garantía de reparación cubre únicamente la falla reparada y tiene una duración de 30 días.',
+                'El retiro del equipo implica la aceptación del trabajo realizado y el monto cobrado.',
+            ];
+        }
+
+        // ── 7. Preparar datos para la vista ──────────────────────────
+        $data = [
+            'orden' => $orden,
+            'dispositivos' => $dispositivos,
+            'qr_code' => $qrCodeBase64,
+            'empresa_config' => $empresaConfig,
+            'terminos' => $terminos,
+        ];
+
+        // ── 8. Renderizar PDF con Dompdf ──────────────────────────────
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('chroot', FCPATH);
+
+        $dompdf = new Dompdf($options);
+        $html = view('admin/ordenes/pdf_orden', $data);
+
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+
+        return $dompdf->stream(
+            'Orden_' . $orden['numero_orden'] . '.pdf',
+            ['Attachment' => false]   // false = abrir en navegador, true = descargar
+        );
     }
+
+
 }
