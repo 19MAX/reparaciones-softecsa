@@ -139,7 +139,6 @@
                     <table class="table table-bordered table-striped align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>#</th>
                                 <th>Dispositivo</th>
                                 <th>Estado</th>
                                 <th>Fecha Entrega</th>
@@ -260,7 +259,6 @@
 
                         filas += `
                             <tr>
-                                <td>${index + 1}</td>
                                 <td>
                                     <strong>${d.tipo_dispositivo}</strong><br>
                                     <small class="text-muted">

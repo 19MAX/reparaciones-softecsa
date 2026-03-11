@@ -82,6 +82,13 @@ $routes->group('admin', function (RouteCollection $routes) {
         $routes->post('eliminar', 'Admin\UrgenciaController::eliminar');
     });
 
+    $routes->group('horarios-atencion', function ($routes) {
+        $routes->get('/', 'Admin\HorarioAtencionController::index');
+        $routes->post('crear', 'Admin\HorarioAtencionController::crear');
+        $routes->post('editar', 'Admin\HorarioAtencionController::editar');
+        $routes->post('eliminar', 'Admin\HorarioAtencionController::eliminar');
+    });
+
     $routes->group('historial', function ($routes) {
         // Listado principal (Bitácora)
         $routes->get('/', 'Admin\HistorialController::index');
