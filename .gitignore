@@ -2,6 +2,10 @@
 # Operating Specific Junk Files
 #-------------------------
 
+#IA
+
+GEMINI.md
+
 # OS X
 .DS_Store
 .AppleDouble
