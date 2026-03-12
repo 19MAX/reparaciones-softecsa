@@ -122,7 +122,7 @@ class UsuariosController extends BaseController
                 'cedula' => $cedula,
                 'nombre' => $nombres,   // ojo: la migración usa 'nombre', no 'nombres'
                 'apellido' => $apellidos, // ojo: la migración usa 'apellido', no 'apellidos'
-                'password' => password_hash($password, PASSWORD_DEFAULT),
+                'password' => $password,
                 'rol' => $role,      // ojo: la migración usa 'rol', no 'role'
                 'activo' => 1,
                 'created_at' => date('Y-m-d H:i:s'),
