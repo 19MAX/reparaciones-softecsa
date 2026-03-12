@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controllers\Admin;
+namespace App\Controllers\Tecnico;
 
 use App\Controllers\BaseController;
 use App\Models\ClienteModel;
@@ -25,7 +25,7 @@ class ClientesController extends BaseController
             'clientes' => $this->clienteModel->findAll(),
         ];
 
-        return view('admin/clientes/index', $data);
+        return view('tecnico/clientes/index', $data);
     }
 
     public function buscarCedula()
@@ -288,13 +288,14 @@ class ClientesController extends BaseController
                 'errors' => 'Error del sistema: ' . $e->getMessage()
             ]);
         }
-        }
+    }
+
     public function ver($id)
     {
         $cliente = $this->clienteModel->find($id);
 
         if (!$cliente) {
-            return redirect()->to(base_url('admin/clientes'))->with('error', 'Cliente no encontrado.');
+            return redirect()->to(base_url('tecnico/clientes'))->with('error', 'Cliente no encontrado.');
         }
 
         $db = \Config\Database::connect();
@@ -309,7 +310,7 @@ class ClientesController extends BaseController
             'ordenes' => $ordenes
         ];
 
-        return view('admin/clientes/ver', $data);
+        return view('tecnico/clientes/ver', $data);
     }
 
     public function crear()
@@ -324,7 +325,7 @@ class ClientesController extends BaseController
         ];
 
         if (!$this->validate($rules)) {
-            return redirectView('admin/clientes', \Config\Services::validation(), [['Corrija los errores del formulario', 'error', 'top-end']], $this->request->getPost(), 'crear');
+            return redirectView('tecnico/clientes', \Config\Services::validation(), [['Corrija los errores del formulario', 'error', 'top-end']], $this->request->getPost(), 'crear');
         }
 
         $data = [
@@ -338,7 +339,7 @@ class ClientesController extends BaseController
 
         $this->clienteModel->insert($data);
 
-        return redirectView('admin/clientes', null, [['Cliente registrado exitosamente', 'success', 'top-end']]);
+        return redirectView('tecnico/clientes', null, [['Cliente registrado exitosamente', 'success', 'top-end']]);
     }
 
     public function editar()
@@ -355,7 +356,7 @@ class ClientesController extends BaseController
         ];
 
         if (!$this->validate($rules)) {
-            return redirectView('admin/clientes', \Config\Services::validation(), [['Corrija los errores del formulario', 'error', 'top-end']], $this->request->getPost(), 'editar');
+            return redirectView('tecnico/clientes', \Config\Services::validation(), [['Corrija los errores del formulario', 'error', 'top-end']], $this->request->getPost(), 'editar');
         }
 
         $data = [
@@ -369,7 +370,7 @@ class ClientesController extends BaseController
 
         $this->clienteModel->update($id, $data);
 
-        return redirectView('admin/clientes', null, [['Cliente actualizado exitosamente', 'success', 'top-end']]);
+        return redirectView('tecnico/clientes', null, [['Cliente actualizado exitosamente', 'success', 'top-end']]);
     }
 
     public function eliminar()
@@ -380,11 +381,11 @@ class ClientesController extends BaseController
         $ordenesAsociadas = $db->table('ordenes')->where('cliente_id', $id)->countAllResults();
 
         if ($ordenesAsociadas > 0) {
-            return redirectView('admin/clientes', null, [['No se puede eliminar porque tiene órdenes asociadas', 'error', 'top-end']]);
+            return redirectView('tecnico/clientes', null, [['No se puede eliminar porque tiene órdenes asociadas', 'error', 'top-end']]);
         }
 
         $this->clienteModel->delete($id);
 
-        return redirectView('admin/clientes', null, [['Cliente eliminado exitosamente', 'success', 'top-end']]);
+        return redirectView('tecnico/clientes', null, [['Cliente eliminado exitosamente', 'success', 'top-end']]);
     }
 }

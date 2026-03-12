@@ -29,7 +29,10 @@ $routes->group('admin', function (RouteCollection $routes) {
 
     $routes->group('clientes', function (RouteCollection $routes) {
         $routes->get('', 'Admin\ClientesController::index');
+        $routes->get('ver/(:num)', 'Admin\ClientesController::ver/$1');
         $routes->post('crear', 'Admin\ClientesController::crear');
+        $routes->post('editar', 'Admin\ClientesController::editar');
+        $routes->post('eliminar', 'Admin\ClientesController::eliminar');
         $routes->post('buscarCedula', 'Admin\ClientesController::buscarCedula');
         $routes->post('crear-js', 'Admin\ClientesController::crearJs');
         $routes->post('actualizar-js', 'Admin\ClientesController::actualizarJs');
@@ -148,6 +151,18 @@ $routes->group('tecnico', function ($routes) {
 
     // Dashboard
     $routes->get('dashboard', 'Tecnico\DashboardController::index');
+
+    // Clientes
+    $routes->group('clientes', function ($routes) {
+        $routes->get('', 'Tecnico\ClientesController::index');
+        $routes->get('ver/(:num)', 'Tecnico\ClientesController::ver/$1');
+        $routes->post('crear', 'Tecnico\ClientesController::crear');
+        $routes->post('editar', 'Tecnico\ClientesController::editar');
+        $routes->post('eliminar', 'Tecnico\ClientesController::eliminar');
+        $routes->post('buscarCedula', 'Tecnico\ClientesController::buscarCedula');
+        $routes->post('crear-js', 'Tecnico\ClientesController::crearJs');
+        $routes->post('actualizar-js', 'Tecnico\ClientesController::actualizarJs');
+    });
 
     // Órdenes
     $routes->group('ordenes', function ($routes) {

@@ -179,8 +179,8 @@
                         </a>
                     </li>
 
-                    <li class="nav-item <?= strpos(current_url(), 'admin/clientes') !== false ? 'active' : '' ?>">
-                        <a href="<?= base_url('admin/clientes') ?>">
+                    <li class="nav-item <?= strpos(current_url(), 'tecnico/clientes') !== false ? 'active' : '' ?>">
+                        <a href="<?= base_url('tecnico/clientes') ?>">
                             <i class="fas fa-users"></i>
                             <p>Clientes</p>
                         </a>
