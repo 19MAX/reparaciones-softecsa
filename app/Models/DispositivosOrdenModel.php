@@ -64,6 +64,7 @@ class DispositivosOrdenModel extends Model
                 'do.fecha_real_entrega',
                 'do.created_at              AS fecha_ingreso',
                 'do.tipo_seguridad AS tipo_pass',
+                'do.clave_acceso',
                 // Tipo, marca, modelo
                 'td.nombre                  AS tipo_dispositivo',
                 'm.nombre                   AS marca',

@@ -55,34 +55,29 @@
                                 <th>Acciones</th>
                             </tr>
                         </thead>
-                        <!-- <tfoot>
-                            <tr>
-                                <th>Cédula</th>
-                                <th>Nombres</th>
-                                <th>Apellidos</th>
-                                <th>Rol</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </tfoot> -->
                         <tbody>
                             <?php if (!empty($usuarios) && is_array($usuarios)): ?>
                                 <?php foreach ($usuarios as $usuario): ?>
                                     <tr>
                                         <td><?= esc($usuario['cedula']) ?></td>
-                                        <td><?= esc($usuario['nombres']) ?></td>
-                                        <td><?= esc($usuario['apellidos']) ?></td>
-                                        <td><?= esc($usuario['role']) ?></td>
-                                        <td><?= esc($usuario['estado']) ?></td>
+                                        <td><?= esc($usuario['nombre']) ?></td>
+                                        <td><?= esc($usuario['apellido']) ?></td>
+                                        <td><?= esc($usuario['rol']) ?></td>
+                                        <td>
+                                            <?php if ($usuario['activo']): ?>
+                                                <span class="badge bg-success">Activo</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-danger">Inactivo</span>
+                                            <?php endif; ?>
                                         <td>
 
                                             <div class="form-button-action">
                                                 <button data-user-id="<?= $usuario['id'] ?>"
                                                     data-cedula-user="<?= $usuario['cedula'] ?>"
-                                                    data-nombres-user="<?= $usuario['nombres'] ?>"
-                                                    data-apellidos-user="<?= $usuario['apellidos'] ?>"
-                                                    data-role-user="<?= $usuario['role'] ?>"
-                                                    data-estado-user="<?= $usuario['estado'] ?>"
+                                                    data-nombres-user="<?= $usuario['nombre'] ?>"
+                                                    data-apellidos-user="<?= $usuario['apellido'] ?>"
+                                                    data-role-user="<?= $usuario['rol'] ?>"
+                                                    data-estado-user="<?= $usuario['activo'] ?>"
                                                     data-tipo-comision="<?= $usuario['tipo_comision'] ?>"
                                                     data-valor-comision="<?= $usuario['valor_comision'] ?>" type="button"
                                                     title="Actualizar usuario" class="btn btn-link btn-primary btn-lg btn-edit"
@@ -91,7 +86,7 @@
                                                     <i class="fa fa-edit"></i>
                                                 </button>
                                                 <button data-user-id="<?= $usuario['id'] ?>"
-                                                    data-nombres-user="<?= $usuario['nombres'] ?>" type="button"
+                                                    data-nombres-user="<?= $usuario['nombre'] ?>" type="button"
                                                     data-bs-toggle="modal" title="Eliminar usuario"
                                                     data-bs-target="#deleteUserModal"
                                                     class="btn btn-link btn-danger btn-delete">

@@ -10,13 +10,15 @@ class Sidebar extends BaseConfig
 
          'configuracion_inicial' => [
             'controllers' => [
-                'UrgenciaController',
+                'PrioridadController',
                 'TiposDispositivosController',
                 'TerminosCondicionesController',
                 'ConfiguracionController',
+                'HorarioAtencionController',
+                'ProblemasController',
             ],
             'items' => [
-                'UrgenciaController',
+                'PrioridadController',
                 'TiposDispositivosController',
                 'TerminosCondicionesController',
                 'ConfiguracionController',

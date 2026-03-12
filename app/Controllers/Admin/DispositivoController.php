@@ -4,6 +4,8 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Models\DispositivoModel;
+use App\Models\DispositivosOrdenModel;
+use App\Models\UsuarioModel;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class DispositivoController extends BaseController
@@ -12,7 +14,7 @@ class DispositivoController extends BaseController
 
     public function __construct()
     {
-        $this->dispositivoModel = new DispositivoModel();
+        $this->dispositivoModel = new DispositivosOrdenModel();
     }
 
     /**
@@ -24,26 +26,59 @@ class DispositivoController extends BaseController
 
         // Obtener todos los técnicos con sus dispositivos
         $tecnicos = $db->query("
+        SELECT 
+            u.id AS tecnico_id,
+            CONCAT(u.nombre, ' ', u.apellido) AS tecnico_nombre,
+            tc.tipo_comision,
+            tc.valor_comision,
+            COUNT(do2.id) AS total_dispositivos,
+            SUM(CASE WHEN do2.estado NOT IN ('listo','entregado','cancelado') THEN 1 ELSE 0 END) AS activos,
+            SUM(CASE WHEN do2.estado = 'listo' THEN 1 ELSE 0 END) AS listos_para_retiro
+        FROM usuarios u
+        JOIN tecnicos_config tc ON tc.usuario_id = u.id
+        LEFT JOIN dispositivos_orden do2 
+            ON do2.tecnico_id = u.id 
+            AND do2.estado NOT IN ('entregado', 'cancelado')
+        WHERE u.rol = 'tecnico'
+        AND u.activo = 1
+        GROUP BY u.id, u.nombre, u.apellido, tc.tipo_comision, tc.valor_comision
+        ORDER BY u.nombre ASC
+    ")->getResultArray();
+
+        // Dispositivos sin técnico asignado
+        $sinAsignar = $db->query("
             SELECT 
-                u.id as tecnico_id,
-                u.nombres,
-                u.apellidos,
-                u.tipo_comision,
-                u.valor_comision,
-                COUNT(d.id) as total_dispositivos,
-                SUM(CASE WHEN o.estado != 'entregado' AND o.estado != 'cancelado' THEN 1 ELSE 0 END) as dispositivos_activos,
-                SUM(CASE WHEN d.estado_reparacion = 'listo_retiro' THEN 1 ELSE 0 END) as dispositivos_listos
-            FROM usuarios u
-            LEFT JOIN dispositivos d ON d.tecnico_id = u.id
-            LEFT JOIN ordenes_trabajo o ON o.id = d.orden_id
-            WHERE u.role = 'tecnico' AND u.estado = 'activo'
-            GROUP BY u.id
-            ORDER BY u.nombres, u.apellidos
+                do2.id,
+                do2.serie_imei,
+                do2.estado,
+                do2.created_at,
+                td.nombre AS tipo_dispositivo,
+                m.nombre AS marca,
+                COALESCE(mo.nombre, do2.modelo_texto) AS modelo,
+                o.numero_orden AS codigo_orden,
+                o.id AS orden_id,
+                c.nombres AS cliente_nombre,
+                c.apellidos AS cliente_apellido
+            FROM dispositivos_orden do2
+            JOIN ordenes o ON o.id = do2.orden_id
+            JOIN clientes c ON c.id = o.cliente_id
+            JOIN tipos_dispositivo td ON td.id = do2.tipo_dispositivo_id
+            JOIN marcas m ON m.id = do2.marca_id
+            LEFT JOIN modelos mo ON mo.id = do2.modelo_id
+            WHERE do2.tecnico_id IS NULL
+              AND do2.estado NOT IN ('entregado','cancelado')
+            ORDER BY do2.created_at ASC
         ")->getResultArray();
+
+        // Lista de técnicos activos para el select de asignación
+        $usuarioModel = new UsuarioModel();
+        $listaTecnicos = $usuarioModel->where('rol', 'tecnico')->findAll();
 
         $data = [
             'titulo' => 'Dispositivos por Técnico',
-            'tecnicos' => $tecnicos
+            'tecnicos' => $tecnicos,
+            'sinAsignar' => $sinAsignar,
+            'listaTecnicos' => $listaTecnicos,
         ];
 
         return view('admin/dispositivos/index', $data);
@@ -61,9 +96,14 @@ class DispositivoController extends BaseController
                 ->with('error', 'Dispositivo no encontrado.');
         }
 
+        // Lista de técnicos activos para asignación
+        $usuarioModel = new UsuarioModel();
+        $listaTecnicos = $usuarioModel->where('rol', 'tecnico')->findAll();
+
         $data = [
             'titulo' => 'Detalle del Dispositivo — ' . $dispositivo['codigo_orden'],
             'dispositivo' => $dispositivo,
+            'listaTecnicos' => $listaTecnicos,
         ];
 
         return view('admin/dispositivos/detalles', $data);
@@ -191,7 +231,7 @@ class DispositivoController extends BaseController
                 $db->transRollback();
                 return $this->response->setJSON([
                     'success' => false,
-                    'message' => "Problema ID {$probId  } con datos inválidos.",
+                    'message' => "Problema ID {$probId} con datos inválidos.",
                 ])->setStatusCode(422);
             }
 
@@ -272,72 +312,143 @@ class DispositivoController extends BaseController
     }
 
     /**
+     * Asignar técnico a un dispositivo (AJAX)
+     */
+    public function asignarTecnico()
+    {
+        $dispositivoId = (int) $this->request->getPost('dispositivo_id');
+        $tecnicoId = (int) $this->request->getPost('tecnico_id');
+
+        if (!$dispositivoId || !$tecnicoId) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Dispositivo y Técnico son requeridos']);
+        }
+
+        $dispositivosModel = model('DispositivosOrdenModel');
+        $dispositivo = $dispositivosModel->find($dispositivoId);
+
+        if (!$dispositivo) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Dispositivo no encontrado']);
+        }
+
+        $usuarioModel = new UsuarioModel();
+        $tecnico = $usuarioModel->find($tecnicoId);
+
+        if (!$tecnico || $tecnico['rol'] !== 'tecnico') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Técnico no válido']);
+        }
+
+        $dispositivosModel->update($dispositivoId, ['tecnico_id' => $tecnicoId]);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'message' => 'Técnico asignado correctamente',
+            'tecnico_nombre' => $tecnico['nombre'] ?? $tecnico['nombres'] . ' ' . ($tecnico['apellidos'] ?? ''),
+        ]);
+    }
+
+    /**
      * Ver dispositivos de un técnico específico
      */
     public function verTecnico($tecnicoId)
     {
+        $tecnicoId = (int) $tecnicoId;
         $db = \Config\Database::connect();
 
-        // Obtener información del técnico
-        $usuarioModel = new \App\Models\UsuarioModel();
-        $tecnico = $usuarioModel->find($tecnicoId);
+        // ── 1. Verificar que el técnico existe ────────────────────────
+        $tecnico = $db->table('usuarios')
+            ->select('id, nombre, rol')
+            ->where('id', $tecnicoId)
+            ->where('rol', 'tecnico')
+            ->where('activo', 1)
+            ->get()->getRowArray();
 
-        if (!$tecnico || $tecnico['role'] !== 'tecnico') {
-            return redirect()->to(base_url('admin/dispositivos'))
-                ->with('error', 'Técnico no encontrado');
+        if (!$tecnico) {
+            return redirect()->to(base_url('tecnicos'))
+                ->with('error', 'Técnico no encontrado.');
         }
 
-        // Obtener dispositivos del técnico
-        $dispositivos = $this->dispositivoModel
-            ->select('dispositivos.*, 
-                      td.nombre as nombre_tipo, 
-                      td.icono,
-                      o.id as orden_id,
-                      o.codigo_orden,
-                      o.estado as estado_orden,
-                      c.nombres as cliente_nombres,
-                      c.apellidos as cliente_apellidos,
-                      c.telefono as cliente_telefono')
-            ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left')
-            ->join('ordenes_trabajo as o', 'o.id = dispositivos.orden_id')
-            ->join('clientes as c', 'c.id = o.cliente_id')
-            ->where('dispositivos.tecnico_id', $tecnicoId)
-            ->orderBy('o.estado', 'ASC')
-            ->orderBy('dispositivos.created_at', 'DESC')
-            ->findAll();
+        // ── 2. Configuración de comisión del técnico ──────────────────
+        $tecnico['config'] = $db->table('tecnicos_config')
+            ->where('usuario_id', $tecnicoId)
+            ->get()->getRowArray();
 
-        // Agrupar por orden
-        $ordenes = [];
-        foreach ($dispositivos as $disp) {
-            $ordenId = $disp['orden_id'];
-            if (!isset($ordenes[$ordenId])) {
-                $ordenes[$ordenId] = [
-                    'orden_id' => $ordenId,
-                    'codigo_orden' => $disp['codigo_orden'],
-                    'estado_orden' => $disp['estado_orden'],
-                    'cliente_nombres' => $disp['cliente_nombres'],
-                    'cliente_apellidos' => $disp['cliente_apellidos'],
-                    'cliente_telefono' => $disp['cliente_telefono'],
-                    'dispositivos' => [],
-                    'todos_listos' => true,
-                    'total_mano_obra' => 0,
-                    'total_repuestos' => 0
-                ];
-            }
+        // ── 3. Dispositivos asignados al técnico ──────────────────────
+        $dispositivos = $db->table('dispositivos_orden do')
+            ->select([
+                'do.id',
+                'do.estado',
+                'do.precio_total',
+                'do.costo_prioridad',
+                'do.comision_tecnico',
+                'do.tiempo_total_horas',
+                'do.fecha_estimada_entrega',
+                'do.fecha_real_entrega',
+                'do.created_at              AS fecha_ingreso',
+                // Dispositivo
+                'td.nombre                  AS tipo_dispositivo',
+                'm.nombre                   AS marca',
+                'COALESCE(mo.nombre, do.modelo_texto) AS modelo',
+                // Prioridad
+                'pr.nombre                  AS prioridad',
+                'pr.color_badge             AS prioridad_color',
+                // Orden y cliente
+                'o.numero_orden',
+                'o.id                       AS orden_id',
+                'c.nombres                  AS cliente_nombre',
+                'c.telefono                 AS cliente_telefono',
+            ])
+            ->join('tipos_dispositivo td', 'td.id = do.tipo_dispositivo_id')
+            ->join('marcas m', 'm.id  = do.marca_id')
+            ->join('modelos mo', 'mo.id = do.modelo_id', 'left')
+            ->join('prioridades pr', 'pr.id = do.prioridad_id', 'left')
+            ->join('ordenes o', 'o.id  = do.orden_id')
+            ->join('clientes c', 'c.id  = o.cliente_id')
+            ->where('do.tecnico_id', $tecnicoId)
+            ->orderBy("FIELD(do.estado,
+            'en_proceso',
+            'pendiente',
+            'listo',
+            'entregado',
+            'cancelado')", '', false)   // Activos primero
+            ->orderBy('do.fecha_estimada_entrega', 'ASC')
+            ->get()->getResultArray();
 
-            $ordenes[$ordenId]['dispositivos'][] = $disp;
-            $ordenes[$ordenId]['total_mano_obra'] += $disp['mano_obra'];
-            $ordenes[$ordenId]['total_repuestos'] += $disp['valor_repuestos'];
+        // ── 4. Enriquecer con los problemas de cada dispositivo ───────
+        foreach ($dispositivos as &$dev) {
+            $dev['problemas'] = $db->table('dispositivo_problemas dp')
+                ->select('p.nombre AS problema, dp.precio_mano_obra, dp.precio_repuesto')
+                ->join('problemas p', 'p.id = dp.problema_id')
+                ->where('dp.dispositivo_orden_id', $dev['id'])
+                ->get()->getResultArray();
+        }
+        unset($dev);
 
-            if ($disp['estado_reparacion'] !== 'listo_retiro') {
-                $ordenes[$ordenId]['todos_listos'] = false;
+        // ── 5. Contadores por estado para el resumen ──────────────────
+        $contadores = [
+            'pendiente' => 0,
+            'en_proceso' => 0,
+            'listo' => 0,
+            'entregado' => 0,
+            'cancelado' => 0,
+        ];
+        foreach ($dispositivos as $dev) {
+            if (isset($contadores[$dev['estado']])) {
+                $contadores[$dev['estado']]++;
             }
         }
+
+        // ── 6. Total comisiones generadas (solo listo/entregado) ──────
+        $totalComisiones = array_sum(array_column(
+            array_filter($dispositivos, fn($d) => in_array($d['estado'], ['listo', 'entregado'])),
+            'comision_tecnico'
+        ));
 
         $data = [
-            'titulo' => 'Dispositivos de ' . $tecnico['nombres'] . ' ' . $tecnico['apellidos'],
+            'titulo' => 'Dispositivos de ' . $tecnico['nombre'],
             'tecnico' => $tecnico,
-            'ordenes' => array_values($ordenes)
+            'dispositivos' => $dispositivos,
+            'contadores' => $contadores,
+            'total_comisiones' => round($totalComisiones, 2),
         ];
 
         return view('admin/dispositivos/ver_tecnico', $data);

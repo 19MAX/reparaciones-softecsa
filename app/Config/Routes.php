@@ -49,6 +49,7 @@ $routes->group('admin', function (RouteCollection $routes) {
 
     $routes->post('dispositivos/reparacion/iniciar', 'Admin\DispositivoController::iniciarReparacion');
     $routes->post('dispositivos/reparacion/finalizar', 'Admin\DispositivoController::finalizarReparacion');
+    $routes->post('dispositivos/asignar-tecnico', 'Admin\DispositivoController::asignarTecnico');
 
     $routes->group('checklist', function ($routes) {
         $routes->get('listar', 'Admin\ChecklistController::listar'); // Para fetchTopChecks
@@ -75,11 +76,11 @@ $routes->group('admin', function (RouteCollection $routes) {
         $routes->post('guardar', 'Admin\ConfiguracionController::guardar');
     });
 
-    $routes->group('urgencias', function ($routes) {
-        $routes->get('/', 'Admin\UrgenciaController::index');
-        $routes->post('crear', 'Admin\UrgenciaController::crear');
-        $routes->post('editar', 'Admin\UrgenciaController::editar');
-        $routes->post('eliminar', 'Admin\UrgenciaController::eliminar');
+    $routes->group('prioridades', function ($routes) {
+        $routes->get('/', 'Admin\PrioridadController::index');
+        $routes->post('crear', 'Admin\PrioridadController::crear');
+        $routes->post('editar', 'Admin\PrioridadController::editar');
+        $routes->post('eliminar', 'Admin\PrioridadController::eliminar');
     });
 
     $routes->group('problemas', function ($routes) {

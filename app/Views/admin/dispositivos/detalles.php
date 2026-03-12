@@ -36,12 +36,18 @@
                             <span class="badge badge-secondary">
                                 <i class="fas fa-barcode me-1"></i><?= esc($dispositivo['serie_imei'] ?: 'Sin IMEI') ?>
                             </span>
-                            <span
-                                class="badge <?= $dispositivo['tipo_pass'] !== 'ninguno' ? 'badge-warning' : 'badge-success' ?>">
-                                <i
-                                    class="fas fa-<?= $dispositivo['tipo_pass'] !== 'ninguno' ? 'lock' : 'lock-open' ?> me-1"></i>
-                                <?= $dispositivo['tipo_pass'] !== 'ninguno' ? ucfirst($dispositivo['tipo_pass']) : 'Sin bloqueo' ?>
-                            </span>
+                            <?php if ($dispositivo['tipo_pass'] !== 'sin_clave' && !empty($dispositivo['clave_acceso'])): ?>
+                                <button type="button" class="badge badge-warning border-0" style="cursor:pointer;"
+                                    data-bs-toggle="modal" data-bs-target="#modalClaveAcceso">
+                                    <i class="fas fa-lock me-1"></i>
+                                    <?= ucfirst($dispositivo['tipo_pass']) ?>
+                                    <i class="fas fa-eye ms-1"></i>
+                                </button>
+                            <?php else: ?>
+                                <span class="badge badge-success">
+                                    <i class="fas fa-lock-open me-1"></i>Sin bloqueo
+                                </span>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -71,22 +77,32 @@
                     </div>
                 </li>
                 <li class="list-group-item">
-
                     <div>
                         <div class="text-muted small text-uppercase mb-1"
                             style="letter-spacing:.04em;font-size:.72rem;">
                             Técnico
                         </div>
-                        <?php if ($dispositivo['tecnico_nombre']): ?>
-                            <span class="fw-bold">
-                                <i class="fas fa-user-cog text-success me-1"></i>
-                                <?= esc($dispositivo['tecnico_nombre']) ?>
-                            </span>
-                        <?php else: ?>
-                            <span class="text-muted">
-                                <i class="fas fa-user-slash me-1"></i>Sin asignar
-                            </span>
-                        <?php endif; ?>
+                        <div id="seccion-tecnico">
+                            <?php if ($dispositivo['tecnico_nombre']): ?>
+                                <span class="fw-bold" id="tecnico-nombre-display">
+                                    <i class="fas fa-user-cog text-success me-1"></i>
+                                    <?= esc($dispositivo['tecnico_nombre']) ?>
+                                </span>
+                            <?php else: ?>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <select class="form-select form-select-sm" id="select-tecnico-detalle" style="max-width:200px;">
+                                        <option value="">-- Asignar técnico --</option>
+                                        <?php foreach ($listaTecnicos as $tec): ?>
+                                            <option value="<?= $tec['id'] ?>"><?= esc($tec['nombre'] ?? $tec['nombres'] . ' ' . ($tec['apellidos'] ?? '')) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-success" id="btn-asignar-tecnico-detalle"
+                                        data-dispositivo="<?= $dispositivo['id'] ?>">
+                                        <i class="fas fa-user-check"></i>
+                                    </button>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </li>
                 <li class="list-group-item">
@@ -484,7 +500,81 @@
         </div>
     </div>
 </div>
+<!-- Modal Clave/Patrón de Acceso -->
+<?php if ($dispositivo['tipo_pass'] !== 'sin_clave' && !empty($dispositivo['clave_acceso'])): ?>
+<div class="modal fade" id="modalClaveAcceso" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h6 class="modal-title fw-bold text-dark">
+                    <i class="fas fa-lock me-2"></i>Clave de Acceso (<?= ucfirst(esc($dispositivo['tipo_pass'])) ?>)
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <?php if ($dispositivo['tipo_pass'] === 'patron'): ?>
+                    <!-- Patrón visual 3x3 -->
+                    <p class="text-muted small mb-2">Secuencia: <strong><?= esc($dispositivo['clave_acceso']) ?></strong></p>
+                    <div id="patron-grid" style="display:inline-grid;grid-template-columns:repeat(3,60px);gap:12px;">
+                        <?php
+                        $puntos = array_map('trim', explode(',', $dispositivo['clave_acceso']));
+                        for ($i = 1; $i <= 9; $i++):
+                            $activo = in_array((string)$i, $puntos);
+                            $orden = $activo ? (array_search((string)$i, $puntos) + 1) : '';
+                        ?>
+                            <div style="width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+                                font-weight:bold;font-size:1.1rem;border:3px solid <?= $activo ? '#28a745' : '#dee2e6' ?>;
+                                background:<?= $activo ? 'rgba(40,167,69,0.15)' : '#f8f9fa' ?>;
+                                color:<?= $activo ? '#28a745' : '#ccc' ?>;">
+                                <?= $activo ? $orden : $i ?>
+                            </div>
+                        <?php endfor; ?>
+                    </div>
+                    <p class="text-muted small mt-2">Los números verdes indican el orden del trazo</p>
+                <?php else: ?>
+                    <!-- PIN / Contraseña / Huella -->
+                    <div class="py-3">
+                        <i class="fas fa-key text-warning" style="font-size:2.5rem;"></i>
+                        <h3 class="mt-3 mb-0 font-monospace"><?= esc($dispositivo['clave_acceso']) ?></h3>
+                        <p class="text-muted small mt-2"><?= ucfirst(esc($dispositivo['tipo_pass'])) ?></p>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <script>
+    // Asignar técnico desde detalles
+    document.getElementById('btn-asignar-tecnico-detalle')?.addEventListener('click', function () {
+        let dispId = this.dataset.dispositivo;
+        let tecnicoId = document.getElementById('select-tecnico-detalle').value;
+
+        if (!tecnicoId) {
+            alert('Selecciona un técnico');
+            return;
+        }
+
+        fetch('<?= base_url('admin/dispositivos/asignar-tecnico') ?>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `dispositivo_id=${dispId}&tecnico_id=${tecnicoId}`
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('seccion-tecnico').innerHTML =
+                    '<span class="fw-bold"><i class="fas fa-user-cog text-success me-1"></i>' + data.tecnico_nombre + '</span>';
+            } else {
+                alert(data.message);
+            }
+        });
+    });
+
     function iniciarReparacion(id) {
         if (!confirm('¿Deseas cambiar el estado a "En Proceso"?')) return;
 

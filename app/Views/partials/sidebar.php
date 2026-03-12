@@ -66,8 +66,8 @@
                             id="forms">
                             <ul class="nav nav-collapse">
 
-                                <li class="<?= sidebar_class(sidebar_item_active('UrgenciaController'), 'active') ?>">
-                                    <a href="<?= base_url('admin/urgencias') ?>">
+                                <li class="<?= sidebar_class(sidebar_item_active('PrioridadController'), 'active') ?>">
+                                    <a href="<?= base_url('admin/prioridades') ?>">
                                         <span class="sub-item">Prioridad</span>
                                     </a>
                                 </li>
@@ -89,6 +89,16 @@
                                 <li class="<?= sidebar_class(sidebar_item_active('ConfiguracionController'), 'active') ?>">
                                     <a href="<?= base_url('admin/configuracion') ?>">
                                         <span class="sub-item">Configuración</span>
+                                    </a>
+                                </li>
+                                <li class="<?= sidebar_class(sidebar_item_active('HorarioAtencionController'), 'active') ?>">
+                                    <a href="<?= base_url('admin/horarios-atencion') ?>">
+                                        <span class="sub-item">Horarios de atención</span>
+                                    </a>
+                                </li>
+                                <li class="<?= sidebar_class(sidebar_item_active('ProblemasController'), 'active') ?>">
+                                    <a href="<?= base_url('admin/problemas') ?>">
+                                        <span class="sub-item">Lista de precios </span>
                                     </a>
                                 </li>
                             </ul>
