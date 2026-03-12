@@ -703,7 +703,7 @@
 <body>
 
     <?php
-    function estadoLabel(string $e): string
+    function estadoLabelPdf(string $e): string
     {
         return match ($e) {
             'pendiente' => 'Pendiente',
@@ -751,7 +751,7 @@
                 <div class="hl-orden">
                     <span class="num">#<?= esc($orden['numero_orden']) ?></span>
                     <span class="fecha"><?= date('d/m/Y — H:i', strtotime($orden['fecha_ingreso'])) ?></span>
-                    <span class="badge bg-<?= esc($orden['estado']) ?>"><?= estadoLabel($orden['estado']) ?></span>
+                    <span class="badge bg-<?= esc($orden['estado']) ?>"><?= estadoLabelPdf($orden['estado']) ?></span>
                 </div>
             </div>
 
@@ -787,12 +787,19 @@
                                 <?php endif; ?>
                             </div>
                             <div class="dh-der">
-                                <span class="badge bg-<?= esc($dev['estado']) ?>"><?= estadoLabel($dev['estado']) ?></span>
+                                <span class="badge bg-<?= esc($dev['estado']) ?>"><?= estadoLabelPdf($dev['estado']) ?></span>
                             </div>
                         </div>
                     </div>
 
                     <div class="dcard-body">
+                        <?php if ($dev['estado'] === 'cancelado' && !empty($dev['comentario_cliente'])): ?>
+                            <div style="background: #fee2e2; border: 1px solid #ef4444; padding: 5px; border-radius: 3px; margin-bottom: 5px;">
+                                <div style="font-size: 6px; font-weight: bold; color: #b91c1c; text-transform: uppercase;">Motivo de Cancelación / Informe:</div>
+                                <div style="font-size: 7px; color: #1a1a2e; margin-top: 2px;"><?= esc($dev['comentario_cliente']) ?></div>
+                            </div>
+                        <?php endif; ?>
+
                         <?php if (!empty($dev['problemas'])): ?>
                             <div class="subtit" style="margin-top:0;">Servicios / Problemas Reportados</div>
                             <ul class="lista-servicios">
@@ -922,7 +929,7 @@
                 <div class="label">Orden N°</div>
                 <div class="num">#<?= esc($orden['numero_orden']) ?></div>
                 <div class="estado-wrap">
-                    <span class="badge bg-<?= esc($orden['estado']) ?>"><?= estadoLabel($orden['estado']) ?></span>
+                    <span class="badge bg-<?= esc($orden['estado']) ?>"><?= estadoLabelPdf($orden['estado']) ?></span>
                 </div>
             </div>
 
@@ -968,7 +975,7 @@
                     <div class="t-item-compact">
                         <div class="tic-info">
                             <span>#<?= $i + 1 ?>         <?= esc($dev['marca']) ?>         <?= esc($dev['modelo'] ?? '') ?></span>
-                            <small><?= estadoLabel($dev['estado']) ?><?= !empty($dev['serie_imei']) ? ' · ' . esc($dev['serie_imei']) : '' ?></small>
+                            <small><?= estadoLabelPdf($dev['estado']) ?><?= !empty($dev['serie_imei']) ? ' · ' . esc($dev['serie_imei']) : '' ?></small>
                             <?php if ($dev['costo_prioridad'] > 0): ?>
                                 <small style="color: #c62828;">(Prioridad: <?= esc($dev['prioridad']) ?>)</small>
                             <?php endif; ?>
@@ -989,7 +996,10 @@
                         <?php if (!empty($dev['serie_imei'])): ?>
                             <div class="t-item-sn">S/N: <?= esc($dev['serie_imei']) ?></div>
                         <?php endif; ?>
-                        <div class="t-item-estado">Estado: <strong><?= estadoLabel($dev['estado']) ?></strong></div>
+                        <div class="t-item-estado">Estado: <strong><?= estadoLabelPdf($dev['estado']) ?></strong></div>
+                        <?php if ($dev['estado'] === 'cancelado' && !empty($dev['comentario_cliente'])): ?>
+                            <div style="font-size: 5.5px; color: #b91c1c; font-style: italic; margin-top: 1px;">Info: <?= esc($dev['comentario_cliente']) ?></div>
+                        <?php endif; ?>
                         <?php if ($dev['costo_prioridad'] > 0): ?>
                             <div class="t-item-estado" style="color: #c62828;">Prioridad: <strong><?= esc($dev['prioridad']) ?></strong></div>
                         <?php endif; ?>

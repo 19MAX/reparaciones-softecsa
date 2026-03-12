@@ -62,17 +62,34 @@ class ConfiguracionController extends BaseController
         // Manejo del Logo
         $file = $this->request->getFile('logo');
         if ($file && $file->isValid() && !$file->hasMoved()) {
-            $newName = $file->getRandomName();
-            $file->move('uploads/empresa', $newName);
-            $data['logo_path'] = 'uploads/empresa/' . $newName;
-
-            // Eliminar logo viejo si existe
+            // Nombre fijo para el logo
+            $fixedName = 'logo';
+            $extension = $file->getExtension();
+            $fullName = $fixedName . '.' . $extension;
+            
+            // Directorio de destino
+            $uploadPath = 'uploads/empresa';
+            
+            // Eliminar logo viejo si existe (basado en la base de datos)
             if ($id) {
                 $oldConfig = $this->configModel->find($id);
-                if (!empty($oldConfig['logo_path']) && file_exists($oldConfig['logo_path'])) {
-                    unlink($oldConfig['logo_path']);
+                if (!empty($oldConfig['logo_path']) && file_exists(FCPATH . $oldConfig['logo_path'])) {
+                    unlink(FCPATH . $oldConfig['logo_path']);
                 }
             }
+
+            // También nos aseguramos de borrar cualquier archivo que se llame 'logo' con otra extensión
+            // para evitar duplicados en la carpeta si cambia el formato (ej: de .png a .jpg)
+            $existingFiles = glob(FCPATH . $uploadPath . '/' . $fixedName . '.*');
+            foreach ($existingFiles as $existingFile) {
+                if (is_file($existingFile)) {
+                    unlink($existingFile);
+                }
+            }
+
+            // Mover el nuevo archivo
+            $file->move(FCPATH . $uploadPath, $fullName);
+            $data['logo_path'] = $uploadPath . '/' . $fullName;
         }
 
         try {

@@ -44,6 +44,38 @@ class DispositivosOrdenModel extends Model
     protected $beforeDelete = [];
     protected $afterDelete = [];
 
+    public function getReparacionesUsuario(int $usuarioId): array
+    {
+        $db = \Config\Database::connect();
+
+        return $db->table('dispositivos_orden do')
+            ->select([
+                'do.id',
+                'do.serie_imei',
+                'do.estado',
+                'do.precio_total',
+                'do.fecha_estimada_entrega',
+                'do.created_at AS fecha_ingreso',
+                // Dispositivo
+                'td.nombre AS tipo_dispositivo',
+                'm.nombre AS marca',
+                'COALESCE(mo.nombre, do.modelo_texto) AS modelo',
+                // Orden y cliente
+                'o.numero_orden',
+                'c.nombres AS cliente_nombre',
+                'c.apellidos AS cliente_apellido',
+            ])
+            ->join('tipos_dispositivo td', 'td.id = do.tipo_dispositivo_id')
+            ->join('marcas m', 'm.id = do.marca_id')
+            ->join('modelos mo', 'mo.id = do.modelo_id', 'left')
+            ->join('ordenes o', 'o.id = do.orden_id')
+            ->join('clientes c', 'c.id = o.cliente_id')
+            ->where('do.tecnico_id', $usuarioId)
+            ->orderBy('do.created_at', 'DESC')
+            ->get()
+            ->getResultArray();
+    }
+
     public function getDetalleCompleto(int $dispositivoId): ?array
     {
         $db = \Config\Database::connect();
@@ -167,6 +199,7 @@ class DispositivosOrdenModel extends Model
                 'he.estado_anterior',
                 'he.estado_nuevo',
                 'he.observacion',
+                'he.observacion_cliente',
                 'he.created_at AS fecha',
                 'u.nombre      AS usuario',
                 'u.rol         AS usuario_rol',

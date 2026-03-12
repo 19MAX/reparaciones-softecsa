@@ -118,6 +118,7 @@ $routes->group('admin', function (RouteCollection $routes) {
     });
     // Dispositivos por técnico
     $routes->get('dispositivos', 'Admin\DispositivoController::index');
+    $routes->get('dispositivos/mis-reparaciones', 'Admin\DispositivoController::misReparaciones');
     $routes->get('dispositivos/ver-tecnico/(:num)', 'Admin\DispositivoController::verTecnico/$1');
     $routes->get('dispositivos/ver-tecnico/(:num)/comisiones', 'Admin\DispositivoController::comisionesPorMes/$1');
     $routes->get('dispositivos/ver-tecnico/(:num)/ingresos', 'Admin\DispositivoController::dispositivosPorMes/$1');

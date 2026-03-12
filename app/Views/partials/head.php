@@ -32,3 +32,5 @@
 
 <!-- TomSelect -->
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/css/tom-select.css" rel="stylesheet">
+
+<link rel="stylesheet" href="<?= base_url('assets/css/estados.css') ?>">

@@ -2,9 +2,9 @@
     <div class="sidebar-logo">
         <!-- Logo Header -->
         <div class="logo-header" data-background-color="dark">
-            <a href="index.html" class="logo">
-                <img src="<?= base_url('assets') ?>/images/logo.png" alt="navbar brand" class="navbar-brand"
-                    height="20">
+            <a href="<?= base_url() ?>" class="logo">
+                <img src="<?= get_logo_url() ?>" alt="navbar brand" class="navbar-brand"
+                    height="35">
             </a>
             <div class="nav-toggle">
                 <button class="btn btn-toggle toggle-sidebar">
@@ -111,10 +111,17 @@
                         </a>
                     </li>
 
-                    <li class="nav-item <?= strpos(current_url(), 'admin/dispositivos') !== false ? 'active' : '' ?>">
+                    <li class="nav-item <?= strpos(current_url(), 'admin/dispositivos') !== false && strpos(current_url(), 'mis-reparaciones') === false ? 'active' : '' ?>">
                         <a href="<?= base_url('admin/dispositivos') ?>">
                             <i class="fas fa-laptop"></i>
                             <p>Dispositivos por Técnico</p>
+                        </a>
+                    </li>
+
+                    <li class="nav-item <?= strpos(current_url(), 'admin/dispositivos/mis-reparaciones') !== false ? 'active' : '' ?>">
+                        <a href="<?= base_url('admin/dispositivos/mis-reparaciones') ?>">
+                            <i class="fas fa-user-cog"></i>
+                            <p>Mis Reparaciones</p>
                         </a>
                     </li>
 

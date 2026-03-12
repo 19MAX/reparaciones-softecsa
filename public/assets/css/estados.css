@@ -1,0 +1,97 @@
+
+
+.movement-cell  { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 180px; }
+.movement-row   { display: flex; align-items: center; gap: 6px; }
+.movement-arrow { color: #adb5bd; font-size: 12px; flex-shrink: 0; }
+.movement-label { font-size: 10px; color: #adb5bd; letter-spacing: 0.5px; text-transform: uppercase; }
+
+/* ═══════════════════════════════════════════════════
+   Estados de Dispositivo — Badges y Pills
+   Úsalo en tu CSS global o impórtalo en tu layout
+═══════════════════════════════════════════════════ */
+
+/* ── BADGE (compacto, para tablas) ────────────────── */
+[class^="estado-badge--"],
+[class*=" estado-badge--"] {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    line-height: 1.5;
+}
+
+/* ── PILL (redondeado, para vistas de detalle) ────── */
+[class^="estado-pill--"],
+[class*=" estado-pill--"] {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    line-height: 1.5;
+}
+
+/* ── COLORES POR ESTADO ───────────────────────────── */
+
+/* pendiente */
+.estado-badge--pendiente,
+.estado-pill--pendiente {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+/* en_proceso */
+.estado-badge--en_proceso,
+.estado-pill--en_proceso {
+    background-color: #cff4fc;
+    color: #055160;
+    border: 1px solid #0dcaf0;
+}
+
+/* pausado */
+.estado-badge--pausado,
+.estado-pill--pausado {
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 1px solid #adb5bd;
+}
+
+/* listo */
+.estado-badge--listo,
+.estado-pill--listo {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #198754;
+}
+
+/* entregado */
+.estado-badge--entregado,
+.estado-pill--entregado {
+    background-color: #e2e3e5;
+    color: #383d41;
+    border: 1px solid #6c757d;
+}
+
+/* cancelado */
+.estado-badge--cancelado,
+.estado-pill--cancelado {
+    background-color: #f8d7da;
+    color: #842029;
+    border: 1px solid #dc3545;
+}
+
+/* fallback para estados desconocidos */
+.estado-badge--,
+.estado-pill-- {
+    background-color: #e9ecef;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}

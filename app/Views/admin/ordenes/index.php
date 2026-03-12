@@ -41,7 +41,7 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table id="ordenes-datatables" class="table table-bordered ">
+                    <table id="ordenes-datatables" class="display table table-hover ">
                         <thead>
                             <tr>
                                 <th># Orden</th>
@@ -84,7 +84,7 @@
                                             </button>
                                         </td>
                                         <td>
-                                            <?= $orden['estado'] ?>
+                                            <?= estadoPill($orden['estado']) ?>
                                         </td>
                                         <td>
                                             <div class="form-button-action">
@@ -209,13 +209,13 @@
 
         const tablaBody = document.getElementById('tabla-dispositivos-body');
 
-    document.querySelectorAll('.btn-ver-dispositivos').forEach(btn => {
+        document.querySelectorAll('.btn-ver-dispositivos').forEach(btn => {
 
-        btn.addEventListener('click', function () {
+            btn.addEventListener('click', function () {
 
-            const ordenId = this.dataset.id;
+                const ordenId = this.dataset.id;
 
-            tablaBody.innerHTML = `
+                tablaBody.innerHTML = `
                 <tr>
                     <td colspan="6" class="text-center">
                         Cargando dispositivos...
@@ -223,41 +223,41 @@
                 </tr>
             `;
 
-            fetch(`<?= base_url('admin/ordenes/dispositivos') ?>/${ordenId}`)
-                .then(response => response.json())
-                .then(data => {
+                fetch(`<?= base_url('admin/ordenes/dispositivos') ?>/${ordenId}`)
+                    .then(response => response.json())
+                    .then(data => {
 
-                    if (!data.success) {
-                        tablaBody.innerHTML = `
+                        if (!data.success) {
+                            tablaBody.innerHTML = `
                             <tr>
                                 <td colspan="6" class="text-center text-danger">
                                     ${data.message}
                                 </td>
                             </tr>
                         `;
-                        return;
-                    }
+                            return;
+                        }
 
-                    if (data.dispositivos.length === 0) {
-                        tablaBody.innerHTML = `
+                        if (data.dispositivos.length === 0) {
+                            tablaBody.innerHTML = `
                             <tr>
                                 <td colspan="6" class="text-center text-muted">
                                     No hay dispositivos registrados.
                                 </td>
                             </tr>
                         `;
-                        return;
-                    }
+                            return;
+                        }
 
-                    let filas = '';
+                        let filas = '';
 
-                    data.dispositivos.forEach((d, index) => {
+                        data.dispositivos.forEach((d, index) => {
 
-                        const fechaEntrega = d.fecha_real_entrega 
-                            ? d.fecha_real_entrega 
-                            : (d.fecha_estimada_entrega ?? '-');
+                            const fechaEntrega = d.fecha_real_entrega
+                                ? d.fecha_real_entrega
+                                : (d.fecha_estimada_entrega ?? '-');
 
-                        filas += `
+                            filas += `
                             <tr>
                                 <td>
                                     <strong>${d.tipo_dispositivo}</strong><br>
@@ -285,25 +285,25 @@
                                 </td>
                             </tr>
                         `;
-                    });
+                        });
 
-                    tablaBody.innerHTML = filas;
+                        tablaBody.innerHTML = filas;
 
-                })
-                .catch(error => {
-                    tablaBody.innerHTML = `
+                    })
+                    .catch(error => {
+                        tablaBody.innerHTML = `
                         <tr>
                             <td colspan="6" class="text-center text-danger">
                                 Error al cargar los dispositivos.
                             </td>
                         </tr>
                     `;
-                    console.error(error);
-                });
+                        console.error(error);
+                    });
+
+            });
 
         });
-
-    });
     });
 </script>
 <?= $this->endSection() ?>

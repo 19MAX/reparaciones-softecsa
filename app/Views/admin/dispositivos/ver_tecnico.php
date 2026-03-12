@@ -230,7 +230,7 @@
                         </div>
                     <?php endif; ?>
 
-                    <a href="<?= base_url('admin/dispositivos/' . $dev['id']) ?>" class="dev-card__btn-ver">Ver</a>
+                    <a href="<?= base_url('admin/dispositivos/detalle/' . $dev['id']) ?>" class="dev-card__btn-ver">Ver</a>
                 </div>
 
             </div>

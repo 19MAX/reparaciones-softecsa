@@ -237,8 +237,7 @@
             <li class="nav-item topbar-user dropdown hidden-caret">
                 <a class="dropdown-toggle profile-pic" data-bs-toggle="dropdown" href="#" aria-expanded="false">
                     <div class="avatar-sm">
-                        <img src="<?= base_url('assets') ?>/images/logo.png" alt="..."
-                            class="avatar-img rounded-circle">
+                        <img src="<?= get_logo_url() ?>" alt="..." class="avatar-img rounded-circle">
                     </div>
                     <span class="profile-username">
                         <span class="op-7">Hola,</span> <span class="fw-bold"><?= session('nombres') ?></span>
@@ -248,8 +247,7 @@
                     <div class="dropdown-user-scroll scrollbar-outer">
                         <li>
                             <div class="user-box">
-                                <div class="avatar-lg"><img src="<?= base_url('assets') ?>/images/logo.png"
-                                        alt="image profile" class="avatar-img rounded"></div>
+                                <div class="avatar-lg"><img src="<?= get_logo_url() ?>" alt="image profile" class="avatar-img rounded"></div>
                                 <div class="u-text">
                                     <h4><?= session('nombres') ?></h4>
                                     <!-- <a href="profile.html" -->

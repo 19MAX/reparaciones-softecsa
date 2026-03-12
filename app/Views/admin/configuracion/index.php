@@ -100,7 +100,7 @@
                 <div class="card-body text-center">
                     <div class="logo-preview-container mb-3 p-2 bg-white rounded border">
                         <img id="logo-preview" 
-                             src="<?= !empty($config['logo_path']) ? base_url($config['logo_path']) : 'https://placehold.co/400x200?text=Subir+Logo' ?>" 
+                             src="<?= !empty($config['logo_path']) ? base_url($config['logo_path']) . '?v=' . time() : 'https://placehold.co/400x200?text=Subir+Logo' ?>" 
                              alt="Logo Preview" 
                              class="img-fluid rounded" 
                              style="max-height: 150px; object-fit: contain;">

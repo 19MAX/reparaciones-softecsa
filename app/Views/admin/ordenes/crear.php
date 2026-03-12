@@ -929,7 +929,7 @@ Nueva Orden de Trabajo
                         tsInstance.setTextboxValue('');
 
                         if (typeof Swal !== 'undefined') {
-                            Swal.fire({ icon: 'success', title: 'Accesorio creado', text: `El accesorio "${data.nombre}" fue creado exitosamente`, timer: 2000, showConfirmButton: false });
+                            showAlert('success', `El accesorio "${data.nombre}" fue creado exitosamente`, 'top-end');
                         }
                     } else {
                         alert('Error: ' + (data.message || 'No se pudo crear el accesorio'));
@@ -978,7 +978,7 @@ Nueva Orden de Trabajo
                         tsInstance.setTextboxValue('');
 
                         if (typeof Swal !== 'undefined') {
-                            Swal.fire({ icon: 'success', title: 'Item creado', text: `El item "${data.nombre}" fue creado exitosamente`, timer: 2000, showConfirmButton: false });
+                            showAlert('success', `El detalle "${data.nombre}" fue creado exitosamente`, 'top-end');
                         }
                     } else {
                         alert('Error: ' + (data.message || 'No se pudo crear el item'));
@@ -1026,13 +1026,7 @@ Nueva Orden de Trabajo
                 this.activeDeviceIndexForModal = null;
 
                 if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Guardado',
-                        text: `${this.devices[index].accesorios.length} accesorios y ${this.devices[index].detalles.length} detalles guardados`,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+                    showAlert('success', `${this.devices[index].accesorios.length} accesorios y ${this.devices[index].detalles.length} detalles cargados`, 'top-end');
                 }
             },
 
@@ -1246,7 +1240,7 @@ Nueva Orden de Trabajo
                         tsInstance.setTextboxValue('');
 
                         if (typeof Swal !== 'undefined') {
-                            Swal.fire({ icon: 'success', title: 'Problema creado', text: `El problema "${data.nombre}" fue creado exitosamente`, timer: 2000, showConfirmButton: false });
+                            showAlert('success', `El problema "${data.nombre}" fue creado exitosamente`, 'top-end');
                         }
                     } else {
                         alert('Error: ' + (data.message || 'No se pudo crear el problema'));
@@ -1530,7 +1524,7 @@ Nueva Orden de Trabajo
                         tsInstance.setTextboxValue('');
 
                         if (typeof Swal !== 'undefined') {
-                            Swal.fire({ icon: 'success', title: 'Marca creada', text: `La marca "${data.nombre}" fue creada exitosamente`, timer: 2000, showConfirmButton: false });
+                            showAlert('success', `La marca "${data.nombre}" fue creada exitosamente`, 'top-end');
                         }
                     } else {
                         alert('Error: ' + (data.message || 'No se pudo crear la marca'));
@@ -1694,7 +1688,7 @@ Nueva Orden de Trabajo
                         tsInstance.setTextboxValue('');
 
                         if (typeof Swal !== 'undefined') {
-                            Swal.fire({ icon: 'success', title: 'Modelo creado', text: `El modelo "${data.nombre}" fue creado exitosamente`, timer: 2000, showConfirmButton: false });
+                            showAlert('success', `El modelo "${data.nombre}" fue creado exitosamente`, 'top-end');
                         }
                     } else {
                         alert('Error: ' + (data.message || 'No se pudo crear el modelo'));

@@ -11,8 +11,15 @@ class ConfiguracionEmpresaModel extends Model
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
-    protected $protectFields    = false;
-    protected $allowedFields    = [];
+    protected $protectFields    = true;
+    protected $allowedFields    = [
+        'nombre_empresa',
+        'logo_path',
+        'telefono',
+        'direccion',
+        'email',
+        'valor_revision'
+    ];
 
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;

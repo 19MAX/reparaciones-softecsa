@@ -570,6 +570,17 @@ class OrdenController extends BaseController
                 ->join('detalles_catalogo dc', 'dc.id = dd.detalle_id', 'left')
                 ->where('dd.dispositivo_orden_id', $devId)
                 ->get()->getResultArray();
+
+            // Última observación para el cliente (útil para cancelaciones)
+            $ultimaObs = $db->table('historial_estados')
+                ->select('observacion_cliente')
+                ->where('dispositivo_orden_id', $devId)
+                ->where('observacion_cliente IS NOT NULL', null, false)
+                ->orderBy('id', 'DESC')
+                ->limit(1)
+                ->get()->getRowArray();
+            
+            $dev['comentario_cliente'] = $ultimaObs['observacion_cliente'] ?? null;
         }
         unset($dev);
 
