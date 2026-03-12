@@ -131,9 +131,9 @@
                                     style="letter-spacing:.04em;font-size:.72rem;">
                                     Entrega real
                                 </div>
-                                <?php if (!empty($dispositivo['fecha_entrega_real'])): ?>
+                                <?php if (!empty($dispositivo['fecha_real_entrega'])): ?>
                                     <span class="fw-bold">
-                                        <?= formatear_fecha($dispositivo['fecha_entrega_real'], 'solo_fecha') ?>
+                                        <?= formatear_fecha($dispositivo['fecha_real_entrega'], 'solo_fecha') ?>
                                     </span>
                                 <?php else: ?>
                                     <span class="text-muted">—</span>
@@ -156,7 +156,9 @@
                         [$badgeClass, $icon] = match (true) {
                             str_contains($estado, 'entregad') => ['badge-success', 'fa-check-circle'],
                             str_contains($estado, 'finaliz') => ['badge-success', 'fa-check-circle'],
+                            str_contains($estado, 'listo') => ['badge-success', 'fa-check-circle'],
                             str_contains($estado, 'reparac') => ['badge-info', 'fa-tools'],
+                            str_contains($estado, 'en_proceso') => ['badge-info', 'fa-tools'],
                             str_contains($estado, 'diagnos') => ['badge-primary', 'fa-search'],
                             str_contains($estado, 'espera') => ['badge-warning', 'fa-clock'],
                             str_contains($estado, 'cancel') => ['badge-danger', 'fa-times-circle'],
@@ -182,6 +184,15 @@
                                 data-bs-target="#modalFinalizar">
                                 <i class="fas fa-check-double me-2"></i>Finalizar Reparación
                             </button>
+                        <?php elseif ($dispositivo['estado'] === 'listo'): ?>
+                            <button type="button" class="btn btn-success btn-sm"
+                                onclick="entregarDispositivo(<?= $dispositivo['id'] ?>)">
+                                <i class="fas fa-hand-holding-heart me-2"></i>Entregar al Cliente
+                            </button>
+                        <?php elseif ($dispositivo['estado'] === 'entregado'): ?>
+                            <div class="alert alert-success mb-0 py-2 text-center">
+                                <small><i class="fas fa-check-circle me-1"></i> Dispositivo Entregado</small>
+                            </div>
                         <?php else: ?>
                             <div class="alert alert-secondary mb-0 py-2 text-center">
                                 <small><i class="fas fa-info-circle me-1"></i> Reparación concluida</small>
@@ -190,12 +201,53 @@
                     </div>
                 </li>
 
-                <!-- Precio -->
+                <!-- Precio Cobrado -->
+                <?php if (in_array($dispositivo['estado'], ['listo', 'entregado'])): ?>
+                <li class="list-group-item">
+                    <div class="mb-2">
+                        <div class="text-muted small text-uppercase mb-1"
+                            style="letter-spacing:.04em;font-size:.72rem;">
+                            Detalle de Cobro
+                        </div>
+                        
+                        <?php 
+                        $totalManoObra = 0;
+                        $totalRepuestos = 0;
+                        foreach($dispositivo['problemas'] as $p) {
+                            $totalManoObra += (float)$p['precio_mano_obra'];
+                            $totalRepuestos += (float)$p['precio_repuesto'];
+                        }
+                        ?>
+
+                        <div class="d-flex flex-column gap-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted small">Mano de Obra:</span>
+                                <span class="fw-bold">$<?= number_format($totalManoObra, 2) ?></span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted small">Repuestos:</span>
+                                <span class="fw-bold">$<?= number_format($totalRepuestos, 2) ?></span>
+                            </div>
+                            <?php if ($dispositivo['costo_prioridad'] > 0): ?>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted small">Cargo Prioridad:</span>
+                                <span class="fw-bold text-danger">+$<?= number_format($dispositivo['costo_prioridad'], 2) ?></span>
+                            </div>
+                            <?php endif; ?>
+                            <div class="border-top mt-1 pt-1 d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-uppercase small">Total Cobrado:</span>
+                                <span class="fw-bold text-success fs-5">$<?= number_format($dispositivo['precio_total'], 2) ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+                <?php else: ?>
+                <!-- Precio Estimado / Base -->
                 <li class="list-group-item">
                     <div>
                         <div class="text-muted small text-uppercase mb-1"
                             style="letter-spacing:.04em;font-size:.72rem;">
-                            Precio a cobrar
+                            Precio Estimado
                         </div>
 
                         <!-- Total destacado -->
@@ -206,29 +258,9 @@
                                 <span class="text-muted fs-6 fw-normal">Sin precio definido</span>
                             <?php endif; ?>
                         </div>
-
-                        <!-- Desglose repuestos + mano de obra -->
-                        <?php if (!empty($dispositivo['precio_repuesto']) || !empty($dispositivo['precio_mano_obra'])): ?>
-                            <div class="d-flex gap-3 flex-wrap">
-                                <?php if (!empty($dispositivo['precio_repuesto'])): ?>
-                                    <small class="text-muted">
-                                        <i class="fas fa-cog me-1"></i>Repuestos:
-                                        <strong
-                                            class="text-dark">$<?= number_format($dispositivo['precio_repuesto'], 2) ?></strong>
-                                    </small>
-                                <?php endif; ?>
-                                <?php if (!empty($dispositivo['precio_mano_obra'])): ?>
-                                    <small class="text-muted">
-                                        <i class="fas fa-wrench me-1"></i>Mano de obra:
-                                        <strong
-                                            class="text-dark">$<?= number_format($dispositivo['precio_mano_obra'], 2) ?></strong>
-                                    </small>
-                                <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
-
                     </div>
                 </li>
+                <?php endif; ?>
             </ul>
         </div>
 
@@ -247,8 +279,8 @@
                             role="tab" aria-controls="tab-problemas" aria-selected="true">
                             <i class="fas fa-exclamation-triangle"></i>
                             Problemas
-                            <?php if (!empty($problemas)): ?>
-                                <span class="badge badge-danger ms-1"><?= count($problemas) ?></span>
+                            <?php if (!empty($dispositivo['problemas'])): ?>
+                                <span class="badge badge-danger ms-1"><?= count($dispositivo['problemas']) ?></span>
                             <?php endif; ?>
                         </a>
                     </li>
@@ -287,13 +319,25 @@
                                     style="letter-spacing:.05em;font-size:.72rem;">
                                     <i class="fas fa-exclamation-triangle me-1 text-danger"></i>Problemas reportados
                                 </p>
-                                <div>
-                                    <?php foreach ($dispositivo['problemas'] as $problema): ?>
-                                        <span class="badge badge-danger"
-                                            style="font-size:.82rem;padding:.45em .75em;white-space:normal;text-align:left;">
-                                            <?= esc($problema['problema']) ?>
-                                        </span>
-                                    <?php endforeach; ?>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover border">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th>Problema</th>
+                                                <th class="text-end">Mano de Obra (Catálogo)</th>
+                                                <th class="text-end">Repuesto (Catálogo)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($dispositivo['problemas'] as $problema): ?>
+                                            <tr>
+                                                <td class="fw-bold"><?= esc($problema['problema']) ?></td>
+                                                <td class="text-end text-muted">$<?= number_format($problema['default_mano_obra'], 2) ?></td>
+                                                <td class="text-end text-muted">$<?= number_format($problema['default_repuesto'], 2) ?></td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
@@ -468,13 +512,13 @@
                                         </select>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="small">Mano de Obra ($)</label>
-                                        <input type="number" step="0.01" name="problemas[<?= $index ?>][precio_mano_obra]" class="form-control form-control-sm" value="0.00">
+                                        <label class="small">Mano de Obra ($) <span class="text-muted" style="font-size: 0.7rem;">(Sugerido: $<?= number_format($prob['default_mano_obra'], 2) ?>)</span></label>
+                                        <input type="number" step="0.01" name="problemas[<?= $index ?>][precio_mano_obra]" class="form-control form-control-sm" value="<?= $prob['default_mano_obra'] ?>">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="small">Repuesto ($)</label>
+                                        <label class="small">Repuesto ($) <span class="text-muted" style="font-size: 0.7rem;">(Sugerido: $<?= number_format($prob['default_repuesto'], 2) ?>)</span></label>
                                         <input type="number" step="0.01" name="problemas[<?= $index ?>][precio_repuesto]"
-                                            class="form-control form-control-sm input-precio" value="0.00">
+                                            class="form-control form-control-sm input-precio" value="<?= $prob['default_repuesto'] ?>">
                                     </div>
                                     <div class="col-12 mt-2">
                                         <input type="text" name="problemas[<?= $index ?>][observacion]"
@@ -590,6 +634,29 @@
                 } else {
                     alert(data.message);
                 }
+            });
+    }
+
+    function entregarDispositivo(id) {
+        if (!confirm('¿Deseas marcar este dispositivo como ENTREGADO?')) return;
+
+        fetch('<?= base_url('admin/dispositivos/entregar') ?>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `dispositivo_id=${id}`
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Dispositivo entregado correctamente');
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error al procesar la entrega');
             });
     }
 

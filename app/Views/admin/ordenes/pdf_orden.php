@@ -297,6 +297,12 @@
             color: #7a5a00;
         }
 
+        .chip-p {
+            background: #ffebee;
+            color: #c62828;
+            font-weight: bold;
+        }
+
         .d-total {
             display: table;
             width: 100%;
@@ -471,8 +477,7 @@
 
         .ticket-orden-num .num {
             font-size: 18px;
-            font-weight: bold;
-            line-height: 1;
+            font-weight: bold; line-height: 1;
         }
 
         .ticket-orden-num .estado-wrap {
@@ -712,6 +717,7 @@
     }
 
     $total_general = array_sum(array_column($dispositivos, 'precio_total'));
+    $total_prioridad = array_sum(array_column($dispositivos, 'costo_prioridad'));
     $es_sin_precio = ($total_general == 0);
     $num_dispositivos = count($dispositivos);
     $ticket_compacto = ($num_dispositivos > 2);
@@ -805,10 +811,21 @@
                                         </div>
                                     </li>
                                 <?php endforeach; ?>
+
+                                <?php if ($dev['costo_prioridad'] > 0): ?>
+                                    <li style="border-top: 1px dashed #eee;">
+                                        <div class="srv-desc" style="color: #c62828; font-weight: bold;">
+                                            &bull; Cargo por Prioridad: <?= esc($dev['prioridad']) ?>
+                                        </div>
+                                        <div class="srv-precio" style="color: #c62828;">
+                                            $<?= number_format((float) $dev['costo_prioridad'], 2) ?>
+                                        </div>
+                                    </li>
+                                <?php endif; ?>
                             </ul>
                         <?php endif; ?>
 
-                        <?php if (!empty($dev['accesorios']) || !empty($dev['detalles'])): ?>
+                        <?php if (!empty($dev['accesorios']) || !empty($dev['detalles']) || $dev['costo_prioridad'] > 0): ?>
                             <div style="margin-top:4px;">
                                 <?php if (!empty($dev['accesorios'])): ?>
                                     <div class="subtit">Accesorios Recibidos</div>
@@ -822,6 +839,9 @@
                                     <?php foreach ($dev['detalles'] as $det): ?>
                                         <span class="chip chip-w"><?= esc($det['detalle']) ?></span>
                                     <?php endforeach; ?>
+                                <?php endif; ?>
+                                <?php if ($dev['costo_prioridad'] > 0): ?>
+                                    <span class="chip chip-p">PRIORIDAD: <?= strtoupper(esc($dev['prioridad'])) ?></span>
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
@@ -869,6 +889,11 @@
                     técnico correspondiente. Confirmo haber leído y aceptado los términos y condiciones establecidos en
                     este documento.<?php if (!$es_sin_precio): ?> El costo estimado de reparación asciende a
                         <strong>$<?= number_format($total_general, 2) ?></strong>.<?php endif; ?>
+                    
+                    <?php if ($total_prioridad > 0): ?>
+                        <br><br>
+                        <strong>ACEPTACIÓN DE TRABAJO PRIORITARIO:</strong> El cliente acepta y autoriza el cargo adicional por concepto de prioridad en la atención de su(s) equipo(s), entendiendo que este valor garantiza un tiempo de respuesta preferencial según lo estipulado en el detalle de la orden.
+                    <?php endif; ?>
                 </div>
 
                 <div class="firma-unica">
@@ -944,6 +969,9 @@
                         <div class="tic-info">
                             <span>#<?= $i + 1 ?>         <?= esc($dev['marca']) ?>         <?= esc($dev['modelo'] ?? '') ?></span>
                             <small><?= estadoLabel($dev['estado']) ?><?= !empty($dev['serie_imei']) ? ' · ' . esc($dev['serie_imei']) : '' ?></small>
+                            <?php if ($dev['costo_prioridad'] > 0): ?>
+                                <small style="color: #c62828;">(Prioridad: <?= esc($dev['prioridad']) ?>)</small>
+                            <?php endif; ?>
                         </div>
                         <div class="tic-price <?= $dev_sin_precio ? 'pending' : '' ?>">
                             <?= $dev_sin_precio ? 'Por diag.' : '$' . number_format((float) $dev['precio_total'], 2) ?>
@@ -962,6 +990,9 @@
                             <div class="t-item-sn">S/N: <?= esc($dev['serie_imei']) ?></div>
                         <?php endif; ?>
                         <div class="t-item-estado">Estado: <strong><?= estadoLabel($dev['estado']) ?></strong></div>
+                        <?php if ($dev['costo_prioridad'] > 0): ?>
+                            <div class="t-item-estado" style="color: #c62828;">Prioridad: <strong><?= esc($dev['prioridad']) ?></strong></div>
+                        <?php endif; ?>
                         <div class="t-item-price <?= $dev_sin_precio ? 'pending' : '' ?>">
                             <?= $dev_sin_precio ? '⚠ Por diagnosticar' : '$' . number_format((float) $dev['precio_total'], 2) ?>
                         </div>

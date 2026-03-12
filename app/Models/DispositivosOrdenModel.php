@@ -21,7 +21,7 @@ class DispositivosOrdenModel extends Model
     protected array $castHandlers = [];
 
     // Dates
-    protected $useTimestamps = false;
+    protected $useTimestamps = true;
     protected $dateFormat = 'datetime';
     protected $createdField = 'created_at';
     protected $updatedField = 'updated_at';
@@ -65,6 +65,7 @@ class DispositivosOrdenModel extends Model
                 'do.created_at              AS fecha_ingreso',
                 'do.tipo_seguridad AS tipo_pass',
                 'do.clave_acceso',
+                'do.modelo_id',
                 // Tipo, marca, modelo
                 'td.nombre                  AS tipo_dispositivo',
                 'm.nombre                   AS marca',
@@ -100,9 +101,10 @@ class DispositivosOrdenModel extends Model
         }
 
         // ── 2. Problemas del dispositivo con precios ──────────────────
-        $dispositivo['problemas'] = $db->table('dispositivo_problemas dp')
+        $problemas = $db->table('dispositivo_problemas dp')
             ->select([
                 'dp.id',
+                'dp.problema_id',
                 'dp.precio_mano_obra',
                 'dp.precio_repuesto',
                 'dp.observacion',
@@ -116,6 +118,22 @@ class DispositivosOrdenModel extends Model
             ->orderBy('dp.id', 'ASC')
             ->get()
             ->getResultArray();
+
+        // Enriquecer con precios base del catálogo para este modelo específico o general
+        foreach ($problemas as &$prob) {
+            $precioBase = $db->table('precios_base')
+                ->where('problema_id', $prob['problema_id'])
+                ->groupStart()
+                    ->where('modelo_id', $dispositivo['modelo_id'])
+                    ->orWhere('modelo_id', null)
+                ->groupEnd()
+                ->orderBy('modelo_id', 'DESC') // Priorizar el que tiene modelo_id
+                ->get()->getRowArray();
+
+            $prob['default_mano_obra'] = $precioBase['precio_mano_obra'] ?? 0;
+            $prob['default_repuesto'] = $precioBase['precio_repuesto'] ?? 0;
+        }
+        $dispositivo['problemas'] = $problemas;
 
         // ── 3. Accesorios ─────────────────────────────────────────────
         $dispositivo['accesorios'] = $db->table('dispositivo_accesorios da')

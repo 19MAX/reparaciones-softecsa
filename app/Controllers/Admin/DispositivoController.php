@@ -163,6 +163,10 @@ class DispositivoController extends BaseController
 
         $db->transComplete();
 
+        // Recalcular estado de la orden
+        $ordenModel = new \App\Models\OrdenesModel();
+        $ordenModel->recalcularEstado($dispositivo['orden_id']);
+
         return $this->response->setJSON([
             'success' => true,
             'message' => 'Estado actualizado correctamente.',
@@ -192,6 +196,7 @@ class DispositivoController extends BaseController
         }
 
         $dispositivosModel = model('DispositivosOrdenModel');
+        $dispositivoProblemaModel = model('DispositivoProblemaModel');
         $historialModel = new \App\Models\HistorialEstados();
         $db = \Config\Database::connect();
 
@@ -249,15 +254,13 @@ class DispositivoController extends BaseController
                 ])->setStatusCode(422);
             }
 
-            $db->table('dispositivo_problemas')
-                ->where('id', $probId)
-                ->update([
-                    // 'estado' => $estado,
-                    'precio_mano_obra' => $mobraObra,
-                    'precio_repuesto' => $repuesto,
-                    'observacion' => $observacion ?: null,
-                    // 'fecha_fin' => $ahora,
-                ]);
+            $dispositivoProblemaModel->update($probId, [
+                // 'estado' => $estado,
+                'precio_mano_obra' => $mobraObra,
+                'precio_repuesto' => $repuesto,
+                'observacion' => $observacion ?: null,
+                // 'fecha_fin' => $ahora,
+            ]);
 
             $totalManoObra += $mobraObra;
             $totalRepuesto += $repuesto;
@@ -301,12 +304,84 @@ class DispositivoController extends BaseController
 
         $db->transComplete();
 
+        // Recalcular estado de la orden
+        $ordenModel = new \App\Models\OrdenesModel();
+        $ordenModel->recalcularEstado($dispositivo['orden_id']);
+
         return $this->response->setJSON([
             'success' => true,
             'message' => 'Reparación finalizada. Dispositivo listo para entrega.',
             'estado' => 'listo',
             'precio_total' => $precioTotal,
             'comision_tecnico' => $comision,
+            'fecha_real' => $ahora,
+        ]);
+    }
+
+    public function entregarDispositivo()
+    {
+        $dispositivoId = (int) $this->request->getPost('dispositivo_id');
+
+        if (!$dispositivoId) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'ID de dispositivo no proporcionado.',
+            ])->setStatusCode(422);
+        }
+
+        $dispositivosModel = model('DispositivosOrdenModel');
+        $historialModel = new \App\Models\HistorialEstados();
+        $db = \Config\Database::connect();
+
+        $dispositivo = $dispositivosModel->find($dispositivoId);
+
+        if (!$dispositivo) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Dispositivo no encontrado.',
+            ])->setStatusCode(404);
+        }
+
+        if ($dispositivo['estado'] !== 'listo') {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Solo se puede entregar un dispositivo que esté en estado "listo".',
+            ])->setStatusCode(422);
+        }
+
+        $ahora = date('Y-m-d H:i:s');
+        $db->transStart();
+
+        $dispositivosModel->update($dispositivoId, [
+            'estado' => 'entregado',
+            'fecha_real_entrega' => $ahora,
+        ]);
+
+        $historialModel->insert([
+            'dispositivo_orden_id' => $dispositivoId,
+            'estado_anterior' => $dispositivo['estado'],
+            'estado_nuevo' => 'entregado',
+            'usuario_id' => session('id_usuario'),
+            'observacion' => 'Dispositivo entregado al cliente.',
+        ]);
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error al actualizar el estado del dispositivo.',
+            ])->setStatusCode(500);
+        }
+
+        // Recalcular estado de la orden
+        $ordenModel = new \App\Models\OrdenesModel();
+        $ordenModel->recalcularEstado($dispositivo['orden_id']);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'message' => 'Dispositivo marcado como entregado.',
+            'estado' => 'entregado',
             'fecha_real' => $ahora,
         ]);
     }
@@ -349,12 +424,15 @@ class DispositivoController extends BaseController
     /**
      * Ver dispositivos de un técnico específico
      */
-    public function verTecnico($tecnicoId)
+    // ──────────────────────────────────────────────────────────
+    // MÉTODO 1 · Vista principal del técnico
+    // GET dispositivos/ver-tecnico/{id}
+    // ──────────────────────────────────────────────────────────
+    public function verTecnico(int $tecnicoId)
     {
-        $tecnicoId = (int) $tecnicoId;
         $db = \Config\Database::connect();
 
-        // ── 1. Verificar que el técnico existe ────────────────────────
+        // 1. Verificar técnico
         $tecnico = $db->table('usuarios')
             ->select('id, nombre, rol')
             ->where('id', $tecnicoId)
@@ -363,16 +441,16 @@ class DispositivoController extends BaseController
             ->get()->getRowArray();
 
         if (!$tecnico) {
-            return redirect()->to(base_url('tecnicos'))
+            return redirect()->to(base_url('admin/tecnicos'))
                 ->with('error', 'Técnico no encontrado.');
         }
 
-        // ── 2. Configuración de comisión del técnico ──────────────────
+        // 2. Config de comisión
         $tecnico['config'] = $db->table('tecnicos_config')
             ->where('usuario_id', $tecnicoId)
             ->get()->getRowArray();
 
-        // ── 3. Dispositivos asignados al técnico ──────────────────────
+        // 3. Dispositivos (siempre todos — el filtro de mes lo hace JS en cliente)
         $dispositivos = $db->table('dispositivos_orden do')
             ->select([
                 'do.id',
@@ -383,19 +461,17 @@ class DispositivoController extends BaseController
                 'do.tiempo_total_horas',
                 'do.fecha_estimada_entrega',
                 'do.fecha_real_entrega',
-                'do.created_at              AS fecha_ingreso',
-                // Dispositivo
-                'td.nombre                  AS tipo_dispositivo',
-                'm.nombre                   AS marca',
+                'do.created_at  AS fecha_ingreso',
+                'do.updated_at',
+                'td.nombre      AS tipo_dispositivo',
+                'm.nombre       AS marca',
                 'COALESCE(mo.nombre, do.modelo_texto) AS modelo',
-                // Prioridad
-                'pr.nombre                  AS prioridad',
-                'pr.color_badge             AS prioridad_color',
-                // Orden y cliente
+                'pr.nombre      AS prioridad',
+                'pr.color_badge AS prioridad_color',
                 'o.numero_orden',
-                'o.id                       AS orden_id',
-                'c.nombres                  AS cliente_nombre',
-                'c.telefono                 AS cliente_telefono',
+                'o.id           AS orden_id',
+                'c.nombres      AS cliente_nombre',
+                'c.telefono     AS cliente_telefono',
             ])
             ->join('tipos_dispositivo td', 'td.id = do.tipo_dispositivo_id')
             ->join('marcas m', 'm.id  = do.marca_id')
@@ -404,16 +480,11 @@ class DispositivoController extends BaseController
             ->join('ordenes o', 'o.id  = do.orden_id')
             ->join('clientes c', 'c.id  = o.cliente_id')
             ->where('do.tecnico_id', $tecnicoId)
-            ->orderBy("FIELD(do.estado,
-            'en_proceso',
-            'pendiente',
-            'listo',
-            'entregado',
-            'cancelado')", '', false)   // Activos primero
+            ->orderBy("FIELD(do.estado,'en_proceso','pendiente','listo','entregado','cancelado')", '', false)
             ->orderBy('do.fecha_estimada_entrega', 'ASC')
             ->get()->getResultArray();
 
-        // ── 4. Enriquecer con los problemas de cada dispositivo ───────
+        // 4. Problemas de cada dispositivo
         foreach ($dispositivos as &$dev) {
             $dev['problemas'] = $db->table('dispositivo_problemas dp')
                 ->select('p.nombre AS problema, dp.precio_mano_obra, dp.precio_repuesto')
@@ -423,34 +494,212 @@ class DispositivoController extends BaseController
         }
         unset($dev);
 
-        // ── 5. Contadores por estado para el resumen ──────────────────
-        $contadores = [
-            'pendiente' => 0,
-            'en_proceso' => 0,
-            'listo' => 0,
-            'entregado' => 0,
-            'cancelado' => 0,
-        ];
+        // 5. Contadores globales (sin filtro)
+        $contadores = ['pendiente' => 0, 'en_proceso' => 0, 'listo' => 0, 'entregado' => 0, 'cancelado' => 0];
         foreach ($dispositivos as $dev) {
-            if (isset($contadores[$dev['estado']])) {
+            if (isset($contadores[$dev['estado']]))
                 $contadores[$dev['estado']]++;
-            }
         }
 
-        // ── 6. Total comisiones generadas (solo listo/entregado) ──────
-        $totalComisiones = array_sum(array_column(
+        // 6. Total comisiones global
+        $totalComisiones = round(array_sum(array_column(
             array_filter($dispositivos, fn($d) => in_array($d['estado'], ['listo', 'entregado'])),
             'comision_tecnico'
-        ));
+        )), 2);
 
-        $data = [
+        // 7. Meses disponibles para el selector (basado en created_at = ingreso)
+        $mesesDisponibles = $this->_getMesesDisponibles($db, $tecnicoId);
+
+        return view('admin/dispositivos/ver_tecnico', [
             'titulo' => 'Dispositivos de ' . $tecnico['nombre'],
             'tecnico' => $tecnico,
             'dispositivos' => $dispositivos,
             'contadores' => $contadores,
-            'total_comisiones' => round($totalComisiones, 2),
+            'total_comisiones' => $totalComisiones,
+            'meses_disponibles' => $mesesDisponibles,
+            'mes_activo' => 'todos',
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // MÉTODO 2 · API JSON — Comisiones por mes del técnico
+    // GET dispositivos/ver-tecnico/{id}/comisiones
+    //
+    // Devuelve: [ { mes:'2026-03', label:'Marzo 2026',
+    //               total_comision: 120.00, cantidad: 5 }, … ]
+    // ──────────────────────────────────────────────────────────
+    public function comisionesPorMes(int $tecnicoId)
+    {
+        $db = \Config\Database::connect();
+
+        // Verificar técnico
+        $existe = $db->table('usuarios')
+            ->where('id', $tecnicoId)->where('rol', 'tecnico')->where('activo', 1)
+            ->countAllResults();
+
+        if (!$existe) {
+            return $this->response->setJSON(['error' => 'Técnico no encontrado'])->setStatusCode(404);
+        }
+
+        $rows = $db->query("
+            SELECT
+                DATE_FORMAT(updated_at, '%Y-%m')   AS mes,
+                DATE_FORMAT(updated_at, '%M %Y')   AS label_en,
+                ROUND(SUM(comision_tecnico), 2)    AS total_comision,
+                COUNT(*)                           AS cantidad
+            FROM dispositivos_orden
+            WHERE tecnico_id = ?
+              AND estado IN ('listo', 'entregado')
+              AND updated_at IS NOT NULL
+            GROUP BY DATE_FORMAT(updated_at, '%Y-%m'),
+                     DATE_FORMAT(updated_at, '%M %Y')
+            ORDER BY mes DESC
+        ", [$tecnicoId])->getResultArray();
+
+        $mesesEs = [
+            'January' => 'Enero',
+            'February' => 'Febrero',
+            'March' => 'Marzo',
+            'April' => 'Abril',
+            'May' => 'Mayo',
+            'June' => 'Junio',
+            'July' => 'Julio',
+            'August' => 'Agosto',
+            'September' => 'Septiembre',
+            'October' => 'Octubre',
+            'November' => 'Noviembre',
+            'December' => 'Diciembre',
         ];
 
-        return view('admin/dispositivos/ver_tecnico', $data);
+        $resultado = array_map(function ($r) use ($mesesEs) {
+            [$mesNombre, $anio] = explode(' ', $r['label_en'], 2);
+            return [
+                'mes' => $r['mes'],
+                'label' => ($mesesEs[$mesNombre] ?? $mesNombre) . ' ' . $anio,
+                'total_comision' => (float) $r['total_comision'],
+                'cantidad' => (int) $r['cantidad'],
+            ];
+        }, $rows);
+
+        return $this->response->setJSON($resultado);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // MÉTODO 3 · API JSON — Dispositivos ingresados por mes
+    // GET dispositivos/ver-tecnico/{id}/ingresos
+    //
+    // Devuelve: [ { mes:'2026-03', label:'Marzo 2026',
+    //               cantidad: 8,
+    //               por_estado: { en_proceso:2, listo:3, … } }, … ]
+    // ──────────────────────────────────────────────────────────
+    public function dispositivosPorMes(int $tecnicoId)
+    {
+        $db = \Config\Database::connect();
+
+        $existe = $db->table('usuarios')
+            ->where('id', $tecnicoId)->where('rol', 'tecnico')->where('activo', 1)
+            ->countAllResults();
+
+        if (!$existe) {
+            return $this->response->setJSON(['error' => 'Técnico no encontrado'])->setStatusCode(404);
+        }
+
+        // Totales por mes
+        $totales = $db->query("
+            SELECT
+                DATE_FORMAT(created_at, '%Y-%m')  AS mes,
+                DATE_FORMAT(created_at, '%M %Y')  AS label_en,
+                COUNT(*)                          AS cantidad
+            FROM dispositivos_orden
+            WHERE tecnico_id = ?
+              AND created_at IS NOT NULL
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m'),
+                     DATE_FORMAT(created_at, '%M %Y')
+            ORDER BY mes DESC
+        ", [$tecnicoId])->getResultArray();
+
+        // Desglose por estado y mes
+        $porEstado = $db->query("
+            SELECT
+                DATE_FORMAT(created_at, '%Y-%m') AS mes,
+                estado,
+                COUNT(*) AS cantidad
+            FROM dispositivos_orden
+            WHERE tecnico_id = ?
+              AND created_at IS NOT NULL
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m'), estado
+        ", [$tecnicoId])->getResultArray();
+
+        // Indexar desglose por mes
+        $desglose = [];
+        foreach ($porEstado as $row) {
+            $desglose[$row['mes']][$row['estado']] = (int) $row['cantidad'];
+        }
+
+        $mesesEs = [
+            'January' => 'Enero',
+            'February' => 'Febrero',
+            'March' => 'Marzo',
+            'April' => 'Abril',
+            'May' => 'Mayo',
+            'June' => 'Junio',
+            'July' => 'Julio',
+            'August' => 'Agosto',
+            'September' => 'Septiembre',
+            'October' => 'Octubre',
+            'November' => 'Noviembre',
+            'December' => 'Diciembre',
+        ];
+
+        $resultado = array_map(function ($r) use ($mesesEs, $desglose) {
+            [$mesNombre, $anio] = explode(' ', $r['label_en'], 2);
+            return [
+                'mes' => $r['mes'],
+                'label' => ($mesesEs[$mesNombre] ?? $mesNombre) . ' ' . $anio,
+                'cantidad' => (int) $r['cantidad'],
+                'por_estado' => $desglose[$r['mes']] ?? [],
+            ];
+        }, $totales);
+
+        return $this->response->setJSON($resultado);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Helper privado — Meses distintos con actividad
+    // ──────────────────────────────────────────────────────────
+    private function _getMesesDisponibles($db, int $tecnicoId): array
+    {
+        $mesesEs = [
+            'January' => 'Enero',
+            'February' => 'Febrero',
+            'March' => 'Marzo',
+            'April' => 'Abril',
+            'May' => 'Mayo',
+            'June' => 'Junio',
+            'July' => 'Julio',
+            'August' => 'Agosto',
+            'September' => 'Septiembre',
+            'October' => 'Octubre',
+            'November' => 'Noviembre',
+            'December' => 'Diciembre',
+        ];
+
+        $rows = $db->query("
+            SELECT
+                DATE_FORMAT(created_at, '%Y-%m') AS valor,
+                DATE_FORMAT(created_at, '%M %Y') AS label
+            FROM dispositivos_orden
+            WHERE tecnico_id = ?
+              AND created_at IS NOT NULL
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m'),
+                     DATE_FORMAT(created_at, '%M %Y')
+            ORDER BY valor DESC
+        ", [$tecnicoId])->getResultArray();
+
+        return array_map(function ($m) use ($mesesEs) {
+            [$mes, $anio] = explode(' ', $m['label'], 2);
+            $m['label'] = ($mesesEs[$mes] ?? $mes) . ' ' . $anio;
+            return $m;
+        }, $rows);
     }
 }

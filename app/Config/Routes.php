@@ -49,6 +49,7 @@ $routes->group('admin', function (RouteCollection $routes) {
 
     $routes->post('dispositivos/reparacion/iniciar', 'Admin\DispositivoController::iniciarReparacion');
     $routes->post('dispositivos/reparacion/finalizar', 'Admin\DispositivoController::finalizarReparacion');
+    $routes->post('dispositivos/entregar', 'Admin\DispositivoController::entregarDispositivo');
     $routes->post('dispositivos/asignar-tecnico', 'Admin\DispositivoController::asignarTecnico');
 
     $routes->group('checklist', function ($routes) {
@@ -118,7 +119,8 @@ $routes->group('admin', function (RouteCollection $routes) {
     // Dispositivos por técnico
     $routes->get('dispositivos', 'Admin\DispositivoController::index');
     $routes->get('dispositivos/ver-tecnico/(:num)', 'Admin\DispositivoController::verTecnico/$1');
-
+    $routes->get('dispositivos/ver-tecnico/(:num)/comisiones', 'Admin\DispositivoController::comisionesPorMes/$1');
+    $routes->get('dispositivos/ver-tecnico/(:num)/ingresos', 'Admin\DispositivoController::dispositivosPorMes/$1');
 
 });
 

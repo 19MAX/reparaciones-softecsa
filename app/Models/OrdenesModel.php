@@ -21,7 +21,7 @@ class OrdenesModel extends Model
     protected array $castHandlers = [];
 
     // Dates
-    protected $useTimestamps = false;
+    protected $useTimestamps = true;
     protected $dateFormat = 'datetime';
     protected $createdField = 'created_at';
     protected $updatedField = 'updated_at';
@@ -61,5 +61,55 @@ class OrdenesModel extends Model
         }
 
         return sprintf('ORD-%s-%05d', $anio, $consecutivo);
+    }
+
+    /**
+     * Recalcula el estado de la orden basado en el estado de sus dispositivos
+     */
+    public function recalcularEstado(int $ordenId)
+    {
+        $db = \Config\Database::connect();
+        
+        // Obtener todos los dispositivos de la orden
+        $dispositivos = $db->table('dispositivos_orden')
+            ->where('orden_id', $ordenId)
+            ->get()->getResultArray();
+
+        if (empty($dispositivos)) {
+            return;
+        }
+
+        $total = count($dispositivos);
+        $estados = array_column($dispositivos, 'estado');
+        $counts = array_count_values($estados);
+
+        $nuevoEstado = 'pendiente';
+
+        // 1. Si TODOS están entregados -> entregado
+        if (($counts['entregado'] ?? 0) === $total) {
+            $nuevoEstado = 'entregado';
+        }
+        // 2. Si TODOS están listos o entregados (pero no todos entregados) -> listo
+        elseif (($counts['listo'] ?? 0) + ($counts['entregado'] ?? 0) === $total) {
+            $nuevoEstado = 'listo';
+        }
+        // 3. Si hay al menos uno en proceso, listo o pausado -> en_proceso
+        elseif (
+            ($counts['en_proceso'] ?? 0) > 0 || 
+            ($counts['listo'] ?? 0) > 0 || 
+            ($counts['pausado'] ?? 0) > 0
+        ) {
+            $nuevoEstado = 'en_proceso';
+        }
+        // 4. Si hay cancelados, hay que ver si los demás están pendientes
+        elseif (($counts['cancelado'] ?? 0) === $total) {
+            $nuevoEstado = 'cancelado';
+        }
+        // De lo contrario queda como pendiente
+
+        // Actualizar la orden
+        $this->update($ordenId, ['estado' => $nuevoEstado]);
+        
+        return $nuevoEstado;
     }
 }

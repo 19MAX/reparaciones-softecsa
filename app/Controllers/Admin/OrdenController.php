@@ -197,7 +197,6 @@ class OrdenController extends BaseController
                 'usuario_recepcion_id' => session('id_usuario'),
                 'estado' => 'pendiente',
                 'observaciones_generales' => '' ?? null,
-                'created_at' => date('Y-m-d H:i:s'),
             ];
 
             $this->ordenModel->insert($ordenData);
