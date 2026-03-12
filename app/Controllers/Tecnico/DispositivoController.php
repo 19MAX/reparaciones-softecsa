@@ -3,183 +3,379 @@
 namespace App\Controllers\Tecnico;
 
 use App\Controllers\BaseController;
-use App\Models\DispositivoModel;
-use App\Models\HistorialDispositivoModel;
-use CodeIgniter\HTTP\ResponseInterface;
+use App\Models\DispositivosOrdenModel;
+use App\Models\HistorialEstados;
 
 class DispositivoController extends BaseController
 {
-    protected $dispositivoModel;
-    protected $historialModel;
-
-    public function __construct()
+    public function asignados()
     {
-        $this->dispositivoModel = new DispositivoModel();
-        $this->historialModel = new HistorialDispositivoModel();
+        $tecnicoId = session('id_usuario');
+        $db = \Config\Database::connect();
+
+        // 1. Verificar técnico
+        $tecnico = $db->table('usuarios')
+            ->select('id, nombre, rol')
+            ->where('id', $tecnicoId)
+            ->where('rol', 'tecnico')
+            ->where('activo', 1)
+            ->get()->getRowArray();
+
+        if (!$tecnico) {
+            return redirect()->to(base_url('tecnico/dashboard'))
+                ->with('error', 'Técnico no válido.');
+        }
+
+        // 2. Config de comisión
+        $tecnico['config'] = $db->table('tecnicos_config')
+            ->where('usuario_id', $tecnicoId)
+            ->get()->getRowArray();
+
+        // 3. Dispositivos (siempre todos — el filtro de mes lo hace JS en cliente)
+        $dispositivos = $db->table('dispositivos_orden do')
+            ->select([
+                'do.id',
+                'do.estado',
+                'do.precio_total',
+                'do.costo_prioridad',
+                'do.comision_tecnico',
+                'do.tiempo_total_horas',
+                'do.fecha_estimada_entrega',
+                'do.fecha_real_entrega',
+                'do.created_at  AS fecha_ingreso',
+                'do.updated_at',
+                'td.nombre      AS tipo_dispositivo',
+                'm.nombre       AS marca',
+                'COALESCE(mo.nombre, do.modelo_texto) AS modelo',
+                'pr.nombre      AS prioridad',
+                'pr.color_badge AS prioridad_color',
+                'o.numero_orden',
+                'o.id           AS orden_id',
+                'c.nombres      AS cliente_nombre',
+                'c.telefono     AS cliente_telefono',
+            ])
+            ->join('tipos_dispositivo td', 'td.id = do.tipo_dispositivo_id')
+            ->join('marcas m', 'm.id  = do.marca_id')
+            ->join('modelos mo', 'mo.id = do.modelo_id', 'left')
+            ->join('prioridades pr', 'pr.id = do.prioridad_id', 'left')
+            ->join('ordenes o', 'o.id  = do.orden_id')
+            ->join('clientes c', 'c.id  = o.cliente_id')
+            ->where('do.tecnico_id', $tecnicoId)
+            ->orderBy("FIELD(do.estado,'en_proceso','pendiente','listo','entregado','cancelado')", '', false)
+            ->orderBy('do.fecha_estimada_entrega', 'ASC')
+            ->get()->getResultArray();
+
+        // 4. Problemas de cada dispositivo
+        foreach ($dispositivos as &$dev) {
+            $dev['problemas'] = $db->table('dispositivo_problemas dp')
+                ->select('p.nombre AS problema, dp.precio_mano_obra, dp.precio_repuesto')
+                ->join('problemas p', 'p.id = dp.problema_id')
+                ->where('dp.dispositivo_orden_id', $dev['id'])
+                ->get()->getResultArray();
+        }
+        unset($dev);
+
+        // 5. Contadores globales
+        $contadores = ['pendiente' => 0, 'en_proceso' => 0, 'listo' => 0, 'entregado' => 0, 'cancelado' => 0];
+        foreach ($dispositivos as $dev) {
+            if (isset($contadores[$dev['estado']]))
+                $contadores[$dev['estado']]++;
+        }
+
+        // 6. Total comisiones global
+        $totalComisiones = round(array_sum(array_column(
+            array_filter($dispositivos, fn($d) => in_array($d['estado'], ['listo', 'entregado'])),
+            'comision_tecnico'
+        )), 2);
+
+        $mesesDisponibles = $this->_getMesesDisponibles($db, $tecnicoId);
+
+        return view('tecnico/dispositivos/asignados', [
+            'titulo' => 'Mis Dispositivos Asignados',
+            'tecnico' => $tecnico,
+            'dispositivos' => $dispositivos,
+            'contadores' => $contadores,
+            'total_comisiones' => $totalComisiones,
+            'meses_disponibles' => $mesesDisponibles,
+            'mes_activo' => 'todos',
+        ]);
     }
 
-    public function index()
+    public function misReparaciones()
     {
-        $tecnicoId = session()->get('id_usuario');
-
-        // Obtener solo dispositivos del técnico autenticado
-        $dispositivos = $this->dispositivoModel
-            ->select('dispositivos.*, 
-                      td.nombre as nombre_tipo, 
-                      td.icono,
-                      o.codigo_orden,
-                      o.estado as estado_orden,
-                      c.nombres as cliente_nombres,
-                      c.apellidos as cliente_apellidos')
-            ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left')
-            ->join('ordenes_trabajo as o', 'o.id = dispositivos.orden_id')
-            ->join('clientes as c', 'c.id = o.cliente_id')
-            ->where('dispositivos.tecnico_id', $tecnicoId)
-            ->orderBy('dispositivos.created_at', 'DESC')
-            ->findAll();
+        $usuarioId = session('id_usuario');
+        $dispositivosModel = new DispositivosOrdenModel();
+        $reparaciones = $dispositivosModel->getReparacionesUsuario($usuarioId);
 
         $data = [
-            'titulo' => 'Mis Dispositivos Asignados',
-            'dispositivos' => $dispositivos
+            'titulo' => 'Mis Reparaciones',
+            'reparaciones' => $reparaciones,
         ];
 
-        return view('tecnico/dispositivos/index', $data);
+        return view('tecnico/dispositivos/mis_reparaciones', $data);
     }
 
-    public function ver($id)
+    public function pool()
     {
-        $tecnicoId = session()->get('id_usuario');
+        $db = \Config\Database::connect();
+        
+        // Dispositivos sin asignar (para que el técnico los pueda tomar)
+        $sinAsignar = $db->query("
+            SELECT 
+                do2.id,
+                do2.serie_imei,
+                do2.estado,
+                do2.created_at,
+                td.nombre AS tipo_dispositivo,
+                m.nombre AS marca,
+                COALESCE(mo.nombre, do2.modelo_texto) AS modelo,
+                o.numero_orden AS codigo_orden,
+                o.id AS orden_id,
+                c.nombres AS cliente_nombre,
+                c.apellidos AS cliente_apellido
+            FROM dispositivos_orden do2
+            JOIN ordenes o ON o.id = do2.orden_id
+            JOIN clientes c ON c.id = o.cliente_id
+            JOIN tipos_dispositivo td ON td.id = do2.tipo_dispositivo_id
+            JOIN marcas m ON m.id = do2.marca_id
+            LEFT JOIN modelos mo ON mo.id = do2.modelo_id
+            WHERE do2.tecnico_id IS NULL
+              AND do2.estado NOT IN ('entregado','cancelado')
+            ORDER BY do2.created_at ASC
+        ")->getResultArray();
 
-        // Obtener dispositivo con validación de seguridad
-        $dispositivo = $this->dispositivoModel
-            ->select('dispositivos.*, 
-                      td.nombre as nombre_tipo, 
-                      td.icono,
-                      o.codigo_orden,
-                      o.estado as estado_orden,
-                      o.id as orden_id,
-                      c.nombres as cliente_nombres,
-                      c.apellidos as cliente_apellidos,
-                      c.email as cliente_email,
-                      c.telefono as cliente_telefono')
-            ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left')
-            ->join('ordenes_trabajo as o', 'o.id = dispositivos.orden_id')
-            ->join('clientes as c', 'c.id = o.cliente_id')
-            ->where('dispositivos.id', $id)
-            ->where('dispositivos.tecnico_id', $tecnicoId) // SEGURIDAD: Solo sus dispositivos
-            ->first();
+        $data = [
+            'titulo' => 'Pool de Dispositivos',
+            'sinAsignar' => $sinAsignar,
+        ];
+
+        return view('tecnico/dispositivos/pool', $data);
+    }
+
+    public function detalle(int $dispositivoId)
+    {
+        $dispositivosModel = model('DispositivosOrdenModel');
+        $dispositivo = $dispositivosModel->getDetalleCompleto($dispositivoId);
 
         if (!$dispositivo) {
-            return redirect()->to(base_url('tecnico/dispositivos'))
-                ->with('error', 'Dispositivo no encontrado o no tienes permisos para verlo');
+            return redirect()->to(base_url('tecnico/dispositivos/pool'))
+                ->with('error', 'Dispositivo no encontrado.');
         }
-
-        // Obtener historial completo del dispositivo
-        // Asegúrate que tu modelo Historial haga un join con la tabla usuarios para traer 'usuario_nombres'
-        $historial = $this->historialModel->obtenerHistorialDispositivo($id);
-
-        // NOTA: Ya no necesitamos pasar $estadosDisponibles porque usamos el helper en la vista
-        // con la función get_select_estados_dispositivo()
 
         $data = [
-            'titulo' => 'Detalles del Dispositivo',
+            'titulo' => 'Detalle del Dispositivo — ' . $dispositivo['codigo_orden'],
             'dispositivo' => $dispositivo,
-            'historial' => $historial
         ];
 
-        return view('tecnico/dispositivos/ver', $data);
+        return view('tecnico/dispositivos/detalle', $data);
     }
 
-    public function actualizarEstado()
+    public function iniciarReparacion()
     {
-        $tecnicoId = session()->get('id_usuario');
+        $dispositivoId = (int) $this->request->getPost('dispositivo_id');
+        $estado = $this->request->getPost('estado') ?? 'en_proceso';
+        $currentUserId = session('id_usuario');
 
-        // Datos del formulario
-        $dispositivoId = $this->request->getPost('dispositivo_id');
-        $nuevoEstadoId = $this->request->getPost('estado'); // Esto ahora es un ID (int)
-        $comentario = $this->request->getPost('comentario');
-        $esVisibleCliente = $this->request->getPost('es_visible_cliente') ? 1 : 0;
+        $dispositivosModel = model('DispositivosOrdenModel');
+        $dispositivo = $dispositivosModel->find($dispositivoId);
 
-        // Costos (opcionales)
-        $manoObra = $this->request->getPost('mano_obra');
-        $valorRepuestos = $this->request->getPost('valor_repuestos');
-
-        // 1. Validar permiso (que el dispositivo sea del técnico)
-        $dispositivoActual = $this->dispositivoModel
-            ->where('id', $dispositivoId)
-            ->where('tecnico_id', $tecnicoId)
-            ->first();
-
-        if (!$dispositivoActual) {
-            return redirect()->back()->with('error', 'No tienes permisos para actualizar este dispositivo');
+        if (!$dispositivo) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Dispositivo no encontrado.'])->setStatusCode(404);
         }
 
-        // 2. Reglas de Validación Actualizadas
-        $validation = \Config\Services::validation();
-        $rules = [
-            'estado' => 'required|is_natural_no_zero', // Valida que sea un número entero > 0
-            'comentario' => 'required|min_length[5]'   // Reduje un poco el mínimo para ser más flexible
+        // VALIDACIÓN: Si ya tiene técnico y NO es el usuario actual, el técnico no puede intervenir
+        if (!empty($dispositivo['tecnico_id']) && $dispositivo['tecnico_id'] != $currentUserId) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Este dispositivo ya está asignado a otro técnico. No puedes iniciar esta reparación.'
+            ])->setStatusCode(403);
+        }
+
+        if ($dispositivo['estado'] !== 'pendiente') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Solo se puede iniciar un dispositivo en estado pendiente.'])->setStatusCode(422);
+        }
+
+        $db = \Config\Database::connect();
+        $historialModel = new \App\Models\HistorialEstados();
+        $db->transStart();
+
+        // Si no hay técnico, asignar al actual
+        if (empty($dispositivo['tecnico_id'])) {
+            $dispositivosModel->update($dispositivoId, ['tecnico_id' => $currentUserId]);
+            $historialModel->insert([
+                'dispositivo_orden_id' => $dispositivoId,
+                'estado_anterior' => $dispositivo['estado'],
+                'estado_nuevo' => $dispositivo['estado'],
+                'usuario_id' => $currentUserId,
+                'observacion' => 'El técnico ha tomado la reparación del dispositivo.',
+            ]);
+        }
+
+        $dispositivosModel->update($dispositivoId, ['estado' => $estado]);
+        $historialModel->insert([
+            'dispositivo_orden_id' => $dispositivoId,
+            'estado_anterior' => $dispositivo['estado'],
+            'estado_nuevo' => $estado,
+            'usuario_id' => $currentUserId,
+            'observacion' => 'Su dispositivo está siendo atendido por nuestro técnico.',
+        ]);
+
+        $db->transComplete();
+        model('App\Models\OrdenesModel')->recalcularEstado($dispositivo['orden_id']);
+
+        return $this->response->setJSON(['success' => true, 'message' => 'Reparación iniciada correctamente.', 'estado' => $estado]);
+    }
+
+    public function finalizarReparacion()
+    {
+        $dispositivoId = (int) $this->request->getPost('dispositivo_id');
+        $comentario = trim($this->request->getPost('comentario') ?? '');
+        $notaTecnica = trim($this->request->getPost('nota_tecnica') ?? '');
+        $problemasPost = $this->request->getPost('problemas');
+        $cancelarManual = $this->request->getPost('cancelar') === 'true';
+        $currentUserId = session('id_usuario');
+
+        if (!$dispositivoId || (empty($problemasPost) && !$cancelarManual) || (!is_array($problemasPost) && !$cancelarManual)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Datos incompletos.'])->setStatusCode(422);
+        }
+
+        if (empty($comentario)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'El comentario para el cliente es obligatorio.'])->setStatusCode(422);
+        }
+
+        $dispositivosModel = model('DispositivosOrdenModel');
+        $dispositivoProblemaModel = model('DispositivoProblemaModel');
+        $historialModel = new \App\Models\HistorialEstados();
+        $db = \Config\Database::connect();
+
+        $dispositivo = $dispositivosModel->find($dispositivoId);
+
+        if (!$dispositivo) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Dispositivo no encontrado.'])->setStatusCode(404);
+        }
+
+        if ($dispositivo['tecnico_id'] != $currentUserId) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No tienes permisos para finalizar esta reparación.'])->setStatusCode(403);
+        }
+
+        if (!in_array($dispositivo['estado'], ['pendiente', 'en_proceso'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'El dispositivo ya fue finalizado o cancelado.'])->setStatusCode(422);
+        }
+
+        $estadosValidos = ['resuelto', 'no_reparable'];
+        $ahora = date('Y-m-d H:i:s');
+
+        $db->transStart();
+
+        $totalManoObra = 0.00;
+        $totalRepuesto = 0.00;
+        $todosNoReparables = true;
+
+        if (!$cancelarManual) {
+            foreach ($problemasPost as $prob) {
+                $probId = (int) ($prob['id'] ?? 0);
+                $estadoProb = $prob['estado'] ?? 'resuelto';
+                $mobraObra = (float) ($prob['precio_mano_obra'] ?? 0);
+                $repuesto = (float) ($prob['precio_repuesto'] ?? 0);
+                $observacion = trim(($prob['observacion'] ?? ''));
+
+                if (!$probId || !in_array($estadoProb, $estadosValidos)) {
+                    $db->transRollback();
+                    return $this->response->setJSON(['success' => false, 'message' => "Problema ID {$probId} con datos inválidos."])->setStatusCode(422);
+                }
+
+                if ($estadoProb === 'resuelto') {
+                    $todosNoReparables = false;
+                }
+
+                $dispositivoProblemaModel->update($probId, [
+                    'precio_mano_obra' => $mobraObra,
+                    'precio_repuesto' => $repuesto,
+                    'observacion' => $observacion ?: null,
+                ]);
+
+                $totalManoObra += $mobraObra;
+                $totalRepuesto += $repuesto;
+            }
+        } else {
+            $todosNoReparables = true;
+        }
+
+        $nuevoEstado = ($cancelarManual || $todosNoReparables) ? 'cancelado' : 'listo';
+
+        if ($nuevoEstado === 'cancelado') {
+            $totalManoObra = 0.00;
+            $totalRepuesto = 0.00;
+            $precioTotal = 0.00;
+            $comision = 0.00;
+
+            $db->table('dispositivo_problemas')
+                ->where('dispositivo_orden_id', $dispositivoId)
+                ->update(['precio_mano_obra' => 0, 'precio_repuesto' => 0]);
+        } else {
+            $precioTotal = $totalManoObra + $totalRepuesto + (float) $dispositivo['costo_prioridad'];
+            $comision = 0.00;
+            $tecnicoConfig = $db->table('tecnicos_config')
+                ->where('usuario_id', $currentUserId)
+                ->get()->getRowArray();
+
+            if ($tecnicoConfig) {
+                $comision = $tecnicoConfig['tipo_comision'] === 'porcentaje'
+                    ? $totalManoObra * ((float) $tecnicoConfig['valor_comision'] / 100)
+                    : (float) $tecnicoConfig['valor_comision'];
+                $comision = round($comision, 2);
+            }
+        }
+
+        $dispositivosModel->update($dispositivoId, [
+            'estado' => $nuevoEstado,
+            'precio_total' => $precioTotal,
+            'comision_tecnico' => $comision,
+            'fecha_real_entrega' => $ahora,
+        ]);
+
+        $historialModel->insert([
+            'dispositivo_orden_id' => $dispositivoId,
+            'estado_anterior' => $dispositivo['estado'],
+            'estado_nuevo' => $nuevoEstado,
+            'usuario_id' => $currentUserId,
+            'observacion' => $notaTecnica ?: 'Cambio de estado a ' . $nuevoEstado,
+            'observacion_cliente' => $comentario,
+        ]);
+
+        $db->transComplete();
+
+        $ordenModel = new \App\Models\OrdenesModel();
+        $ordenModel->recalcularEstado($dispositivo['orden_id']);
+
+        $msg = ($nuevoEstado === 'cancelado') ? 'Reparación cancelada/no reparable.' : 'Reparación finalizada. Dispositivo listo para entrega.';
+
+        return $this->response->setJSON(['success' => true, 'message' => $msg, 'estado' => $nuevoEstado]);
+    }
+
+    private function _getMesesDisponibles($db, int $tecnicoId): array
+    {
+        $mesesEs = [
+            'January' => 'Enero', 'February' => 'Febrero', 'March' => 'Marzo', 'April' => 'Abril',
+            'May' => 'Mayo', 'June' => 'Junio', 'July' => 'Julio', 'August' => 'Agosto',
+            'September' => 'Septiembre', 'October' => 'Octubre', 'November' => 'Noviembre', 'December' => 'Diciembre',
         ];
 
-        if (!$validation->setRules($rules)->run($this->request->getPost())) {
-            return redirect()->back()
-                ->withInput()
-                ->with('errors', $validation->getErrors());
-        }
+        $rows = $db->query("
+            SELECT
+                DATE_FORMAT(created_at, '%Y-%m') AS valor,
+                DATE_FORMAT(created_at, '%M %Y') AS label
+            FROM dispositivos_orden
+            WHERE tecnico_id = ?
+              AND created_at IS NOT NULL
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m'), DATE_FORMAT(created_at, '%M %Y')
+            ORDER BY valor DESC
+        ", [$tecnicoId])->getResultArray();
 
-        try {
-            $db = \Config\Database::connect();
-            $db->transStart();
-
-            // 3. Preparar datos para actualizar Dispositivo
-            $datosActualizacion = [
-                'estado_reparacion' => $nuevoEstadoId, // Guardamos el ID del estado
-            ];
-
-            // Solo actualizamos costos si vienen en el POST (si el switch estaba activo)
-            // Si están vacíos o son null, mantenemos el valor actual de la base de datos o ponemos 0
-            if ($manoObra !== null && $manoObra !== '') {
-                $datosActualizacion['mano_obra'] = $manoObra;
-            }
-
-            if ($valorRepuestos !== null && $valorRepuestos !== '') {
-                $datosActualizacion['valor_repuestos'] = $valorRepuestos;
-            }
-
-            // Ejecutar Update en tabla Dispositivos
-            $this->dispositivoModel->update($dispositivoId, $datosActualizacion);
-
-            // 4. Preparar datos para el Historial
-            // Obtenemos los nombres legibles usando el Helper para guardarlos en el historial
-            // Esto es importante para que en el timeline se lea "En Reparación" y no "5"
-
-            $nombreEstadoAnterior = get_nombre_estado_dispositivo((int) $dispositivoActual['estado_reparacion']);
-            $nombreNuevoEstado = get_nombre_estado_dispositivo((int) $nuevoEstadoId);
-
-            $this->historialModel->insert([
-                'dispositivo_id' => $dispositivoId,
-                'usuario_id' => $tecnicoId,
-                'estado_anterior' => $nombreEstadoAnterior, // Guardamos Texto
-                'estado_nuevo' => $nombreNuevoEstado,    // Guardamos Texto
-                'comentario' => $comentario,
-                'es_visible_cliente' => $esVisibleCliente,
-                'created_at' => date('Y-m-d H:i:s')
-            ]);
-
-            $db->transComplete();
-
-            if ($db->transStatus() === false) {
-                throw new \Exception('Error de base de datos al guardar la transacción.');
-            }
-
-            return redirect()->to(base_url('tecnico/dispositivos/ver/' . $dispositivoId))
-                ->with('success', 'Estado actualizado correctamente.');
-
-        } catch (\Exception $e) {
-            log_message('error', '[Tecnico/DispositivoController::actualizarEstado] ' . $e->getMessage());
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Ocurrió un error: ' . $e->getMessage());
-        }
+        return array_map(function ($m) use ($mesesEs) {
+            [$mes, $anio] = explode(' ', $m['label'], 2);
+            $m['label'] = ($mesesEs[$mes] ?? $mes) . ' ' . $anio;
+            return $m;
+        }, $rows);
     }
 }

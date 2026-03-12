@@ -174,7 +174,7 @@
                 <div class="card-body p-3">
 
                     <div x-show="activeTab === 'update'" x-transition.opacity>
-                        <form action="<?= base_url('tecnico/dispositivos/actualizarEstado') ?>" method="POST">
+                        <form id="formActualizarEstado" action="<?= base_url('tecnico/dispositivos/actualizarEstado') ?>" method="POST">
                             <?= csrf_field() ?>
                             <input type="hidden" name="dispositivo_id" value="<?= $dispositivo['id'] ?>">
 
@@ -353,6 +353,33 @@
             scrollContainer.addEventListener("wheel", (evt) => {
                 evt.preventDefault();
                 scrollContainer.scrollLeft += evt.deltaY;
+            });
+        }
+
+        // Manejo de confirmación para Admin
+        const form = document.getElementById('formActualizarEstado');
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                const tecnicoIdAsignado = <?= json_encode($dispositivo['tecnico_id']) ?>;
+                const currentUserId = <?= json_encode(session('id_usuario')) ?>;
+                const userRole = <?= json_encode(session('role')) ?>;
+
+                if (userRole === 'admin' && tecnicoIdAsignado != currentUserId) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'Intervenir Reparación',
+                        text: 'Este dispositivo está asignado a otro técnico. Si continúas, pasarás a ser el encargado y se registrará tu intervención.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, tomar control y guardar',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#f59e0b'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit();
+                        }
+                    });
+                }
             });
         }
     });

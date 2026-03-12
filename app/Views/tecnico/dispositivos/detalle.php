@@ -635,9 +635,9 @@
 <!-- Breadcrumb -->
 <div class="page-header">
     <ul class="breadcrumbs ps-1 ms-0">
-        <li class="nav-home"><a href="<?= base_url('admin/dashboard') ?>"><i class="icon-home"></i></a></li>
+        <li class="nav-home"><a href="<?= base_url('tecnico/dashboard') ?>"><i class="icon-home"></i></a></li>
         <li class="separator"><i class="icon-arrow-right"></i></li>
-        <li class="nav-item"><a href="<?= base_url('admin/ordenes') ?>">Órdenes</a></li>
+        <li class="nav-item"><a href="<?= base_url('tecnico/dispositivos/pool') ?>">Pool de Dispositivos</a></li>
         <li class="separator"><i class="icon-arrow-right"></i></li>
         <li class="nav-item"><a href="#">Detalle Dispositivo</a></li>
     </ul>
@@ -690,9 +690,9 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
                 <div class="dv-info-row">
                     <span class="dv-label">Orden</span>
                     <span class="dv-value">
-                        <a href="<?= base_url('admin/ordenes/editar/' . $dispositivo['orden_id']) ?>">
+                        <span class="badge bg-light text-dark border">
                             <?= esc($dispositivo['codigo_orden']) ?>
-                        </a>
+                        </span>
                     </span>
                 </div>
 
@@ -712,56 +712,11 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
                     <span class="dv-value" id="seccion-tecnico">
                         <?php if ($dispositivo['tecnico_nombre']): ?>
                             <span><?= esc($dispositivo['tecnico_nombre']) ?></span>
-                            <?php if (session('role') === 'admin' && !in_array($estado, ['listo', 'entregado', 'cancelado'])): ?>
-                                <button class="btn btn-link btn-xs p-0 ms-2 text-warning"
-                                    onclick="document.getElementById('edit-tecnico-form').style.display='flex'; this.style.display='none';"
-                                    title="Cambiar técnico">
-                                    <i class="fas fa-sync-alt"></i>
-                                </button>
-                            <?php endif; ?>
                         <?php else: ?>
-                            <?php if (session('role') === 'admin' && !in_array($estado, ['listo', 'entregado', 'cancelado'])): ?>
-                                <div style="display:flex; gap:8px; align-items:center; justify-content:flex-end;">
-                                    <select id="select-tecnico-detalle" class="dv-input dv-select"
-                                        style="min-width:150px; font-weight:400;">
-                                        <option value="">Asignar técnico</option>
-                                        <?php foreach ($listaTecnicos as $tec): ?>
-                                            <option value="<?= $tec['id'] ?>">
-                                                <?= esc($tec['nombre'] ?? $tec['nombres'] . ' ' . ($tec['apellidos'] ?? '')) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <button class="dv-btn-action btn-start" id="btn-asignar-tecnico-detalle"
-                                        data-dispositivo="<?= $dispositivo['id'] ?>"
-                                        style="width:auto; padding:6px 12px; font-size:.8rem;">
-                                        Asignar
-                                    </button>
-                                </div>
-                            <?php else: ?>
-                                <span class="muted" style="font-size:.8rem;">Sin asignar</span>
-                            <?php endif; ?>
+                            <span class="muted" style="font-size:.8rem;">Sin asignar</span>
                         <?php endif; ?>
                     </span>
                 </div>
-
-                <?php if (session('role') === 'admin' && $dispositivo['tecnico_id'] && !in_array($estado, ['listo', 'entregado', 'cancelado'])): ?>
-                    <div id="edit-tecnico-form"
-                        style="display:none; gap:8px; align-items:center; justify-content:flex-end; padding: 8px 20px;">
-                        <select id="select-tecnico-detalle-edit" class="dv-input dv-select"
-                            style="min-width:150px; font-weight:400;">
-                            <option value="">Seleccionar nuevo...</option>
-                            <?php foreach ($listaTecnicos as $tec): ?>
-                                <option value="<?= $tec['id'] ?>" <?= $dispositivo['tecnico_id'] == $tec['id'] ? 'selected' : '' ?>>
-                                    <?= esc($tec['nombre'] ?? $tec['nombres'] . ' ' . ($tec['apellidos'] ?? '')) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <button class="btn btn-warning btn-sm" id="btn-reasignar-tecnico-detalle"
-                            data-dispositivo="<?= $dispositivo['id'] ?>">
-                            Cambiar
-                        </button>
-                    </div>
-                <?php endif; ?>
 
                 <?php if (!empty($dispositivo['prioridad'])): ?>
                     <div class="dv-info-row">
@@ -800,9 +755,9 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
                         <i class="fas fa-check me-1"></i> Finalizar Reparación
                     </button>
                 <?php elseif ($estado === 'listo'): ?>
-                    <button class="dv-btn-action btn-deliver" onclick="entregarDispositivo(<?= $dispositivo['id'] ?>)">
-                        <i class="fas fa-box-open me-1"></i> Entregar al Cliente
-                    </button>
+                    <div class="dv-delivered-badge" style="background:#d1fae5;color:#065f46;">
+                        <i class="fas fa-check-double me-1"></i> Listo para entrega
+                    </div>
                 <?php elseif ($estado === 'entregado'): ?>
                     <div class="dv-delivered-badge"><i class="fas fa-check-circle me-1"></i> Dispositivo entregado</div>
                 <?php else: ?>
@@ -1295,88 +1250,41 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
     function abrirModalFinalizar(e) {
         const tecnicoIdAsignado = <?= json_encode($dispositivo['tecnico_id']) ?>;
         const currentUserId = <?= json_encode(session('id_usuario')) ?>;
-        const userRole = <?= json_encode(session('role')) ?>;
-        const tecnicoNombre = <?= json_encode($dispositivo['tecnico_nombre'] ?? 'otro técnico') ?>;
 
         if (tecnicoIdAsignado && tecnicoIdAsignado != currentUserId) {
-            if (userRole !== 'admin') {
-                showAlert('error', 'Este dispositivo está asignado a ' + tecnicoNombre + '. Solo el administrador puede intervenir.', 'center');
-                return;
-            }
-
-            Swal.fire({
-                title: 'Intervenir Reparación',
-                text: 'Este dispositivo está asignado a ' + tecnicoNombre + '. Si continúas, pasarás a ser el encargado y finalizarás la reparación.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, tomar y finalizar',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#f59e0b'
-            }).then(res => {
-                if (res.isConfirmed) {
-                    const modal = new bootstrap.Modal(document.getElementById('modalFinalizar'));
-                    modal.show();
-                }
-            });
-        } else {
-            const modal = new bootstrap.Modal(document.getElementById('modalFinalizar'));
-            modal.show();
+            showAlert('error', 'Este dispositivo está asignado a otro técnico. No puedes finalizar su reparación.', 'center');
+            return;
         }
-    }
 
-    /* ── Asignar técnico ─────────────────────────── */
-    document.getElementById('btn-asignar-tecnico-detalle')?.addEventListener('click', function () {
-        const dispId = this.dataset.dispositivo;
-        const tecnicoId = document.getElementById('select-tecnico-detalle').value;
-        if (!tecnicoId) { showAlert('warning', 'Selecciona un técnico', 'top-end'); return; }
-        asignarTecnico(dispId, tecnicoId);
-    });
-
-    document.getElementById('btn-reasignar-tecnico-detalle')?.addEventListener('click', function () {
-        const dispId = this.dataset.dispositivo;
-        const tecnicoId = document.getElementById('select-tecnico-detalle-edit').value;
-        if (!tecnicoId) { showAlert('warning', 'Selecciona un nuevo técnico', 'top-end'); return; }
-        asignarTecnico(dispId, tecnicoId);
-    });
-
-    function asignarTecnico(dispositivoId, tecnicoId) {
-        fetch('<?= base_url('admin/dispositivos/asignar-tecnico') ?>', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `dispositivo_id=${dispositivoId}&tecnico_id=${tecnicoId}`
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) { showAlert('success', 'Técnico actualizado', 'top-end'); setTimeout(() => location.reload(), 1000); }
-                else showAlert('error', data.message, 'top-end');
-            });
+        const modal = new bootstrap.Modal(document.getElementById('modalFinalizar'));
+        modal.show();
     }
 
     /* ── Iniciar reparación ──────────────────────── */
     function iniciarReparacion(id) {
         const tecnicoIdAsignado = <?= json_encode($dispositivo['tecnico_id']) ?>;
         const currentUserId = <?= json_encode(session('id_usuario')) ?>;
-        const userRole = <?= json_encode(session('role')) ?>;
-        const tecnicoNombre = <?= json_encode($dispositivo['tecnico_nombre'] ?? 'otro técnico') ?>;
 
         let title = '¿Iniciar reparación?';
         let text = 'El dispositivo pasará a estado "En Proceso".';
         let icon = 'question';
 
         if (tecnicoIdAsignado && tecnicoIdAsignado != currentUserId) {
-            if (userRole !== 'admin') { showAlert('error', 'Este dispositivo está asignado a ' + tecnicoNombre + '.', 'center'); return; }
-            title = 'Intervenir Reparación'; text = 'Está asignado a ' + tecnicoNombre + '. Si continúas, se te re-asignará a ti y pasarás a ser el encargado.'; icon = 'warning';
+            showAlert('error', 'Este dispositivo ya está asignado a otro técnico.', 'center'); 
+            return;
         } else if (!tecnicoIdAsignado) {
-            title = 'Asignación Automática'; text = 'No hay técnico asignado. Quedarás como responsable de la reparación.'; icon = 'info';
+            title = 'Tomar Reparación'; 
+            text = 'No hay técnico asignado. Al iniciar, quedarás como responsable de la reparación.'; 
+            icon = 'info';
         }
 
         Swal.fire({
-            title, text, icon, showCancelButton: true, confirmButtonText: 'Sí, tomar control', cancelButtonText: 'Cancelar',
-            confirmButtonColor: icon === 'warning' ? '#f59e0b' : '#2563eb'
+            title, text, icon, showCancelButton: true, confirmButtonText: 'Sí, iniciar', cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#2563eb'
         })
             .then(res => {
                 if (!res.isConfirmed) return;
-                fetch('<?= base_url('admin/dispositivos/reparacion/iniciar') ?>', {
+                fetch('<?= base_url('tecnico/dispositivos/reparacion/iniciar') ?>', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: `dispositivo_id=${id}&estado=en_proceso`
@@ -1389,39 +1297,10 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
             });
     }
 
-    /* ── Entregar dispositivo ────────────────────── */
+    /* ── Entregar dispositivo (NO PERMITIDO PARA TECNICO DESDE AQUI, PERO DEJAMOS LA LOGICA) ────────────────────── */
     function entregarDispositivo(id) {
-        const tecnicoIdAsignado = <?= json_encode($dispositivo['tecnico_id']) ?>;
-        const currentUserId = <?= json_encode(session('id_usuario')) ?>;
-        const userRole = <?= json_encode(session('role')) ?>;
-        const tecnicoNombre = <?= json_encode($dispositivo['tecnico_nombre'] ?? 'otro técnico') ?>;
-
-        let title = '¿Entregar al cliente?';
-        let text = 'Esta acción marcará el dispositivo como entregado.';
-        let icon = 'question';
-
-        if (tecnicoIdAsignado && tecnicoIdAsignado != currentUserId && userRole === 'admin') {
-            title = 'Intervenir para Entrega'; text = 'El dispositivo fue reparado por ' + tecnicoNombre + '. Al entregarlo tú, quedarás como responsable de la entrega final.'; icon = 'warning';
-        }
-
-        Swal.fire({
-            title, text, icon,
-            showCancelButton: true, confirmButtonText: 'Confirmar entrega', cancelButtonText: 'Cancelar', 
-            confirmButtonColor: icon === 'warning' ? '#f59e0b' : '#0ea5e9'
-        })
-            .then(res => {
-                if (!res.isConfirmed) return;
-                fetch('<?= base_url('admin/dispositivos/entregar') ?>', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `dispositivo_id=${id}`
-                })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) { showAlert('success', 'Dispositivo entregado', 'top-end'); setTimeout(() => location.reload(), 1000); }
-                        else showAlert('error', data.message, 'center');
-                    });
-            });
+        // En teoria, el técnico no puede entregar, si se requiere, se llamaria al endpoint
+        showAlert('warning', 'La entrega de dispositivos debe ser realizada por recepción o administración.', 'center');
     }
 
     /* ── Cancelar reparación ─────────────────────── */
@@ -1458,7 +1337,7 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
                 formData.append('cancelar', 'true');
                 formData.append('comentario', res.value.comentario);
                 formData.append('nota_tecnica', res.value.nota_tecnica);
-                fetch('<?= base_url('admin/dispositivos/reparacion/finalizar') ?>', { method: 'POST', body: formData })
+                fetch('<?= base_url('tecnico/dispositivos/reparacion/finalizar') ?>', { method: 'POST', body: formData })
                     .then(r => r.json())
                     .then(data => {
                         if (data.success) { showAlert('success', 'Reparación cancelada', 'top-end'); setTimeout(() => location.reload(), 1000); }
@@ -1475,7 +1354,7 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
 
-        fetch('<?= base_url('admin/dispositivos/reparacion/finalizar') ?>', {
+        fetch('<?= base_url('tecnico/dispositivos/reparacion/finalizar') ?>', {
             method: 'POST', body: new FormData(this)
         })
             .then(r => r.json())

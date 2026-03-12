@@ -8,12 +8,8 @@ Dashboard Técnico
 <div class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4">
     <div>
         <h3 class="fw-bold mb-3">Dashboard Técnico</h3>
-        <h6 class="op-7 mb-2">Panel de Control - <?= esc($tecnico['nombres']) ?> <?= esc($tecnico['apellidos']) ?></h6>
+        <h6 class="op-7 mb-2">Panel de Control - <?= esc($tecnico['nombres'] ?? $tecnico['nombre']) ?> <?= esc($tecnico['apellidos'] ?? '') ?></h6>
     </div>
-    <!-- <div class="ms-md-auto py-2 py-md-0">
-        <a href="#" class="btn btn-label-info btn-round me-2">Manage</a>
-        <a href="#" class="btn btn-primary btn-round">Add Customer</a>
-    </div> -->
 </div>
 
 <div class="row row-card-no-pd">
@@ -40,7 +36,7 @@ Dashboard Técnico
                 <div class="d-flex justify-content-between">
                     <div>
                         <h6><b>En Proceso</b></h6>
-                        <p class="text-muted">Activos</p>
+                        <p class="text-muted">Activos / Pendientes</p>
                     </div>
                     <h4 class="text-warning fw-bold"><?= $dispositivosEnProceso ?></h4>
                 </div>
@@ -75,10 +71,14 @@ Dashboard Técnico
                     <div>
                         <h6><b>Ganancia Mes</b></h6>
                         <p class="text-muted">
-                            <?php if ($tecnico['tipo_comision'] === 'porcentaje'): ?>
-                                <?= $tecnico['valor_comision'] ?>%
+                            <?php if (!empty($tecnico['config'])): ?>
+                                <?php if ($tecnico['config']['tipo_comision'] === 'porcentaje'): ?>
+                                    <?= $tecnico['config']['valor_comision'] ?>%
+                                <?php else: ?>
+                                    $<?= number_format($tecnico['config']['valor_comision'], 2) ?> fijo
+                                <?php endif; ?>
                             <?php else: ?>
-                                $<?= number_format($tecnico['valor_comision'], 2) ?> fijo
+                                Sin configurar
                             <?php endif; ?>
                         </p>
                     </div>
@@ -98,12 +98,12 @@ Dashboard Técnico
             <div class="card-header">
                 <div class="d-flex align-items-center">
                     <h4 class="card-title"><i class="fas fa-laptop me-2"></i>Mis Dispositivos Recientes</h4>
-                    <div class="ms-auto">
-                        <a href="<?= base_url('tecnico/dispositivos') ?>" class="btn btn-primary btn-round me-2">
-                            <i class="fa fa-list me-2"></i> Ver Todos
+                    <div class="ms-auto d-flex gap-2">
+                        <a href="<?= base_url('tecnico/dispositivos/pool') ?>" class="btn btn-warning btn-round btn-sm">
+                            <i class="fa fa-list-ul me-2"></i> Pool
                         </a>
-                        <a href="<?= base_url('tecnico/ingresos') ?>" class="btn btn-success btn-round">
-                            <i class="fa fa-dollar-sign me-2"></i> Mis Ingresos
+                        <a href="<?= base_url('tecnico/dispositivos/asignados') ?>" class="btn btn-primary btn-round btn-sm">
+                            <i class="fa fa-laptop me-2"></i> Mis Asignados
                         </a>
                     </div>
                 </div>
@@ -116,7 +116,7 @@ Dashboard Técnico
                                 <th>Orden</th>
                                 <th>Dispositivo</th>
                                 <th>Cliente</th>
-                                <th>Problema</th>
+                                <th>Ingreso</th>
                                 <th>Estado Actual</th>
                                 <th>Acciones</th>
                             </tr>
@@ -129,13 +129,10 @@ Dashboard Técnico
                                             <?= esc($dispositivo['codigo_orden']) ?>
                                         </td>
                                         <td>
-                                            <?php if (!empty($dispositivo['icono'])): ?>
-                                                <i class="<?= $dispositivo['icono'] ?> me-1"></i>
-                                            <?php endif; ?>
-                                            <?= esc($dispositivo['nombre_tipo'] ?? $dispositivo['tipo']) ?>
+                                            <?= esc($dispositivo['nombre_tipo']) ?>
                                             <br>
                                             <small class="text-muted">
-                                                <?= esc($dispositivo['marca']) ?>         <?= esc($dispositivo['modelo']) ?>
+                                                <?= esc($dispositivo['marca']) ?> <?= esc($dispositivo['modelo']) ?>
                                             </small>
                                         </td>
                                         <td>
@@ -143,25 +140,22 @@ Dashboard Técnico
                                             <?= esc($dispositivo['cliente_apellidos']) ?>
                                         </td>
                                         <td>
-                                            <span class="d-inline-block text-truncate" style="max-width: 250px;"
-                                                title="<?= esc($dispositivo['problema_reportado']) ?>">
-                                                <?= esc($dispositivo['problema_reportado']) ?>
-                                            </span>
+                                            <?= date('d/m/Y H:i', strtotime($dispositivo['created_at'])) ?>
                                         </td>
                                         <td>
-                                            <?= get_badge_estado_dispositivo(esc($dispositivo['estado_reparacion'])) ?>
+                                            <?= estadoPill($dispositivo['estado']) ?>
                                         </td>
                                         <td>
-                                            <a href="<?= base_url('tecnico/dispositivos/ver/' . $dispositivo['id']) ?>"
+                                            <a href="<?= base_url('tecnico/dispositivos/detalle/' . $dispositivo['id']) ?>"
                                                 class="btn btn-sm btn-primary">
-                                                <i class="fas fa-eye"></i> Ver y Actualizar
+                                                <i class="fas fa-eye"></i> Detalle
                                             </a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted">
+                                    <td colspan="6" class="text-center text-muted py-4">
                                         No tienes dispositivos asignados aún
                                     </td>
                                 </tr>

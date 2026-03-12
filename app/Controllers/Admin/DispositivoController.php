@@ -228,8 +228,25 @@ class DispositivoController extends BaseController
 
         $estadosValidos = ['resuelto', 'no_reparable'];
         $ahora = date('Y-m-d H:i:s');
+        $currentUserId = session('id_usuario');
+        $currentUserRol = session('role');
 
         $db->transStart();
+
+        // ── LÓGICA DE TOMA DE CONTROL (Takeover) ──
+        // Si el Admin finaliza y no es el técnico asignado, se le re-asigna
+        if ($currentUserRol === 'admin' && $dispositivo['tecnico_id'] != $currentUserId) {
+            $dispositivosModel->update($dispositivoId, ['tecnico_id' => $currentUserId]);
+            $historialModel->insert([
+                'dispositivo_orden_id' => $dispositivoId,
+                'estado_anterior' => $dispositivo['estado'],
+                'estado_nuevo' => $dispositivo['estado'],
+                'usuario_id' => $currentUserId,
+                'observacion' => 'El Administrador ha tomado el control y finalizado la reparación.',
+            ]);
+            // Actualizamos la variable local para los cálculos de comisión posteriores
+            $dispositivo['tecnico_id'] = $currentUserId;
+        }
 
         $totalManoObra = 0.00;
         $totalRepuesto = 0.00;
@@ -379,7 +396,23 @@ class DispositivoController extends BaseController
         }
 
         $ahora = date('Y-m-d H:i:s');
+        $currentUserId = session('id_usuario');
+        $currentUserRol = session('role');
+
         $db->transStart();
+
+        // ── LÓGICA DE TOMA DE CONTROL (Takeover) ──
+        // Si el Admin entrega y no es el técnico asignado, se le re-asigna (aunque ya esté terminado)
+        if ($currentUserRol === 'admin' && $dispositivo['tecnico_id'] != $currentUserId) {
+            $dispositivosModel->update($dispositivoId, ['tecnico_id' => $currentUserId]);
+            $historialModel->insert([
+                'dispositivo_orden_id' => $dispositivoId,
+                'estado_anterior' => $dispositivo['estado'],
+                'estado_nuevo' => $dispositivo['estado'],
+                'usuario_id' => $currentUserId,
+                'observacion' => 'El Administrador ha tomado el control del dispositivo para su entrega final.',
+            ]);
+        }
 
         $dispositivosModel->update($dispositivoId, [
             'estado' => 'entregado',

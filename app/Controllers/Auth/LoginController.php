@@ -42,6 +42,7 @@ class LoginController extends BaseController
 
         $json = $this->request->getJSON(true);
 
+        try {
         // Validación básica de campos
         if (
             !$this->validateData($json, [
@@ -73,7 +74,7 @@ class LoginController extends BaseController
         if (!password_verify($json['password'], $usuario['password'])) {
             return $this->response->setJSON([
                 'status' => 'error',
-                'message' => 'Credenciales incorrectas.',
+                'message' => 'Credenciales incorrectas pass.',
                 'token' => csrf_hash()
             ]);
         }
@@ -115,6 +116,15 @@ class LoginController extends BaseController
             'redirect' => base_url($redirectUrl),
             'token' => csrf_hash()
         ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Error en LoginController@loginProcess: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'Ocurrió un error inesperado. Intenta nuevamente.',
+                'token' => csrf_hash()
+            ])->setStatusCode(500);
+            //throw $th;
+        }
     }
 
     public function logout()

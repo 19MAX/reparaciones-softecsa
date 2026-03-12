@@ -149,10 +149,21 @@ $routes->group('tecnico', function ($routes) {
     // Dashboard
     $routes->get('dashboard', 'Tecnico\DashboardController::index');
 
-    //Dispositivos
-    $routes->get('dispositivos', 'Tecnico\DispositivoController::index');
-    $routes->get('dispositivos/ver/(:num)', 'Tecnico\DispositivoController::ver/$1');
-    $routes->post('dispositivos/actualizarEstado', 'Tecnico\DispositivoController::actualizarEstado');
+    // Órdenes
+    $routes->group('ordenes', function ($routes) {
+        $routes->get('crear', 'Tecnico\OrdenController::crear');
+        $routes->post('guardar', 'Tecnico\OrdenController::guardar');
+    });
+
+    // Dispositivos
+    $routes->get('dispositivos/asignados', 'Tecnico\DispositivoController::asignados');
+    $routes->get('dispositivos/mis-reparaciones', 'Tecnico\DispositivoController::misReparaciones');
+    $routes->get('dispositivos/pool', 'Tecnico\DispositivoController::pool');
+    $routes->get('dispositivos/detalle/(:num)', 'Tecnico\DispositivoController::detalle/$1');
+
+    // Acciones de reparación
+    $routes->post('dispositivos/reparacion/iniciar', 'Tecnico\DispositivoController::iniciarReparacion');
+    $routes->post('dispositivos/reparacion/finalizar', 'Tecnico\DispositivoController::finalizarReparacion');
 
     // Ingresos
     $routes->get('ingresos', 'Tecnico\IngresosController::index');

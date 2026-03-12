@@ -179,6 +179,13 @@
                         </a>
                     </li>
 
+                    <li class="nav-item <?= strpos(current_url(), 'admin/clientes') !== false ? 'active' : '' ?>">
+                        <a href="<?= base_url('admin/clientes') ?>">
+                            <i class="fas fa-users"></i>
+                            <p>Clientes</p>
+                        </a>
+                    </li>
+
                     <li class="nav-section">
                         <span class="sidebar-mini-icon">
                             <i class="fa fa-ellipsis-h"></i>
@@ -186,17 +193,31 @@
                         <h4 class="text-section">Mi Trabajo</h4>
                     </li>
 
-                    <li class="nav-item <?= strpos(current_url(), 'tecnico/dispositivos') !== false ? 'active' : '' ?>">
-                        <a href="<?= base_url('tecnico/dispositivos') ?>">
-                            <i class="fas fa-laptop"></i>
-                            <p>Mis Dispositivos</p>
+                    <li class="nav-item <?= strpos(current_url(), 'tecnico/ordenes/crear') !== false ? 'active' : '' ?>">
+                        <a href="<?= base_url('tecnico/ordenes/crear') ?>">
+                            <i class="fas fa-plus-square"></i>
+                            <p>Nueva Orden</p>
                         </a>
                     </li>
 
-                    <li class="nav-item <?= strpos(current_url(), 'tecnico/ingresos') !== false ? 'active' : '' ?>">
-                        <a href="<?= base_url('tecnico/ingresos') ?>">
-                            <i class="fas fa-dollar-sign"></i>
-                            <p>Mis Ingresos</p>
+                    <li class="nav-item <?= strpos(current_url(), 'tecnico/dispositivos/pool') !== false ? 'active' : '' ?>">
+                        <a href="<?= base_url('tecnico/dispositivos/pool') ?>">
+                            <i class="fas fa-list-ul"></i>
+                            <p>Pool de Dispositivos</p>
+                        </a>
+                    </li>
+
+                    <li class="nav-item <?= strpos(current_url(), 'tecnico/dispositivos/asignados') !== false ? 'active' : '' ?>">
+                        <a href="<?= base_url('tecnico/dispositivos/asignados') ?>">
+                            <i class="fas fa-laptop"></i>
+                            <p>Mis Asignados</p>
+                        </a>
+                    </li>
+
+                    <li class="nav-item <?= strpos(current_url(), 'tecnico/dispositivos/mis-reparaciones') !== false ? 'active' : '' ?>">
+                        <a href="<?= base_url('tecnico/dispositivos/mis-reparaciones') ?>">
+                            <i class="fas fa-tools"></i>
+                            <p>Mis Reparaciones</p>
                         </a>
                     </li>
 
