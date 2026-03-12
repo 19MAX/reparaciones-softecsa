@@ -59,6 +59,7 @@
          $position = $message[2] ?? 'top-end';
          $codigo = $message[3] ?? null;
          $urlConsulta = $message[4] ?? null;
+         $cedula = $message[5] ?? null;
          ?>
          showAlert(
             <?= json_encode($type ?? "") ?>,

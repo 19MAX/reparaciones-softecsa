@@ -140,7 +140,7 @@ Nueva Orden de Trabajo
                                 <div class="text-end mb-2" x-show="devices.length > 1">
                                     <button type="button"
                                         class="btn btn-sm text-danger link-danger text-decoration-none"
-                                        @click="removeDevice(index)">
+                                        @click.prevent="removeDevice(index)">
                                         <i class="fas fa-trash-alt"></i> Eliminar este equipo
                                     </button>
                                 </div>
@@ -211,7 +211,7 @@ Nueva Orden de Trabajo
 
                                             <div class="col-md-6" x-show="dev.tipo_pass === 'patron'" x-transition>
                                                 <button type="button" class="btn btn-outline-dark w-100 border-dashed"
-                                                    @click="openPatternModal(index)">
+                                                    @click.prevent="openPatternModal(index)">
                                                     <i class="fas fa-draw-polygon me-1"></i>
                                                     <span
                                                         x-text="dev.patron_data ? 'Patrón Guardado (Editar)' : 'Dibujar Patrón'"></span>
@@ -249,10 +249,10 @@ Nueva Orden de Trabajo
             <div class="row mb-5">
                 <div class="col-md-8 mx-auto">
                     <div class="d-flex gap-2 justify-content-center">
-                        <button type="button" class="btn btn-outline-secondary py-2 flex-grow-1" @click="addDevice">
+                        <button type="button" class="btn btn-outline-secondary py-2 flex-grow-1" @click.prevent="addDevice">
                             <i class="fas fa-plus me-1"></i> Agregar Nuevo Dispositivo
                         </button>
-                        <button type="button" class="btn btn-outline-dark py-2 flex-grow-1" @click="cloneLastDevice">
+                        <button type="button" class="btn btn-outline-dark py-2 flex-grow-1" @click.prevent="cloneLastDevice">
                             <i class="fas fa-copy me-1"></i> Copiar Anterior
                         </button>
                     </div>
@@ -266,15 +266,15 @@ Nueva Orden de Trabajo
             <div class="sticky-sidebar">
                 <div class="card shadow-sm border-0 mb-3">
                     <div class="card-body position-relative">
-                        <button class="btn btn-sm btn-light text-primary position-absolute top-0 end-0 m-2"
-                            @click="openModalClient('create')">
+                        <button type="button" class="btn btn-sm btn-light text-primary position-absolute top-0 end-0 m-2"
+                            @click.prevent="openModalClient('create')">
                             <i class="fas fa-user-plus"></i>
                         </button>
                         <label class="form-label small fw-bold">Cliente</label>
                         <div class="input-group">
                             <input type="text" class="form-control" x-model="searchCedula"
                                 @keydown.enter.prevent="buscarCliente" placeholder="Cédula o RUC" :disabled="isLoading">
-                            <button class="btn btn-primary" type="button" @click="buscarCliente" :disabled="isLoading">
+                            <button class="btn btn-primary" type="button" @click.prevent="buscarCliente" :disabled="isLoading">
                                 <i class="fas" :class="isLoading ? 'fa-spinner fa-spin' : 'fa-search'"></i>
                             </button>
                         </div>
@@ -285,8 +285,8 @@ Nueva Orden de Trabajo
                 <div x-show="client" class="card shadow-sm border-0 border-start border-5 border-success mb-3"
                     x-transition>
                     <div class="card-body position-relative">
-                        <button class="btn btn-sm btn-light text-primary position-absolute top-0 end-0 m-2"
-                            @click="openModalClient('edit')">
+                        <button type="button" class="btn btn-sm btn-light text-primary position-absolute top-0 end-0 m-2"
+                            @click.prevent="openModalClient('edit')">
                             <i class="fas fa-edit"></i>
                         </button>
                         <h6 class="fw-bold text-dark" x-text="client?.nombres + ' ' + client?.apellidos"></h6>
@@ -298,7 +298,7 @@ Nueva Orden de Trabajo
                             <div x-show="client?.email"><i class="fas fa-envelope me-2 width-20"></i> <span
                                     x-text="client?.email"></span></div>
                         </div>
-                        <button class="btn btn-sm btn-outline-danger w-100 mt-3" @click="resetClient">Cambiar
+                        <button type="button" class="btn btn-sm btn-outline-danger w-100 mt-3" @click.prevent="resetClient">Cambiar
                             Cliente</button>
                     </div>
                 </div>
@@ -307,7 +307,7 @@ Nueva Orden de Trabajo
                     x-transition>
                     <i class="fas fa-user-slash fa-lg mb-2 text-warning"></i>
                     <p class="small mb-2">No encontrado. ¿Desea registrarlo?</p>
-                    <button class="btn btn-dark w-100 btn-sm" @click="openModalClient('create')">Crear Nuevo
+                    <button type="button" class="btn btn-dark w-100 btn-sm" @click.prevent="openModalClient('create')">Crear Nuevo
                         Cliente</button>
                 </div>
             </div>
@@ -347,7 +347,7 @@ Nueva Orden de Trabajo
                                             <option :value="tec.id" x-text="tec.nombres"></option>
                                         </template>
                                     </select>
-                                    <button class="btn btn-outline-primary" type="button" @click="applyTechnicianToAll"
+                                    <button class="btn btn-outline-primary" type="button" @click.prevent="applyTechnicianToAll"
                                         title="Aplicar este técnico a todos los dispositivos">
                                         <i class="fas fa-check-double"></i>
                                     </button>
@@ -462,10 +462,10 @@ Nueva Orden de Trabajo
                 </div>
 
                 <div class="modal-footer ">
-                    <button type="button" class="btn btn-outline-danger text-decoration-none" @click="clearPattern">
+                    <button type="button" class="btn btn-outline-danger text-decoration-none" @click.prevent="clearPattern">
                         <i class="fas fa-eraser me-1"></i> Limpiar
                     </button>
-                    <button type="button" class="btn btn-primary" @click="savePattern">
+                    <button type="button" class="btn btn-primary" @click.prevent="savePattern">
                         <i class="fas fa-save me-1"></i> Guardar
                     </button>
                 </div>

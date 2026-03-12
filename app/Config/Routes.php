@@ -153,6 +153,7 @@ $routes->group('tecnico', function ($routes) {
     $routes->group('ordenes', function ($routes) {
         $routes->get('crear', 'Tecnico\OrdenController::crear');
         $routes->post('guardar', 'Tecnico\OrdenController::guardar');
+        $routes->get('imprimir/(:num)', 'Tecnico\OrdenController::imprimir/$1');
     });
 
     // Dispositivos
