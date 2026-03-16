@@ -17,7 +17,7 @@ $routes->group('auth', function (RouteCollection $routes) {
 $routes->get('consulta/orden/(:segment)', 'ConsultaController::verOrden/$1');
 $routes->get('consulta/mis-ordenes', 'ConsultaController::buscarPorCedula');
 
-$routes->group('admin', function (RouteCollection $routes) {
+$routes->group('admin', ['filter' => 'auth'], function (RouteCollection $routes) {
     $routes->get('dashboard', 'Admin\DashboardController::index');
 
     $routes->group('usuarios', function (RouteCollection $routes) {
@@ -147,7 +147,7 @@ $routes->group('recepcionista', function ($routes) {
 
 
 // Grupo de rutas para técnicos
-$routes->group('tecnico', function ($routes) {
+$routes->group('tecnico', ['filter' => 'auth'], function ($routes) {
 
     // Dashboard
     $routes->get('dashboard', 'Tecnico\DashboardController::index');
@@ -180,13 +180,14 @@ $routes->group('tecnico', function ($routes) {
     // Acciones de reparación
     $routes->post('dispositivos/reparacion/iniciar', 'Tecnico\DispositivoController::iniciarReparacion');
     $routes->post('dispositivos/reparacion/finalizar', 'Tecnico\DispositivoController::finalizarReparacion');
+    $routes->post('dispositivos/reparacion/entregar', 'Tecnico\DispositivoController::entregarDispositivo');
 
     // Ingresos
     $routes->get('ingresos', 'Tecnico\IngresosController::index');
 });
 //Rutas de consulta global con autenticación
 //TODO: AGREGAR FILTRO DE AUTENTICACIÓN
-$routes->group('global', function ($routes) {
+$routes->group('global', ['filter' => 'auth'], function ($routes) {
 
     // Obtener marcas y modelos (AJAX)
     $routes->get('get-marcas-por-tipo/(:num)', 'GlobalController::getMarcasPorTipoGlobal/$1');

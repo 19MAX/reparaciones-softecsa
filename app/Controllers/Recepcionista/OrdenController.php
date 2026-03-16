@@ -364,7 +364,15 @@ class OrdenController extends BaseController
         $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
 
-        return $dompdf->stream("Orden_" . $orden['codigo_orden'] . ".pdf", ["Attachment" => false]);
+        $pdf = $dompdf->output();
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader(
+                'Content-Disposition',
+                'inline; filename="Orden_' . $orden['numero_orden'] . '.pdf"'
+            )
+            ->setBody($pdf);
     }
 
     public function entregar($id)

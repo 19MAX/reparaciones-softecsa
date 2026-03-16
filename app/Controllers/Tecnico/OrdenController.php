@@ -155,6 +155,9 @@ class OrdenController extends BaseController
 
             $urlPdf = base_url('tecnico/ordenes/imprimir/' . $ordenId);
 
+            (new \App\Services\ReparacionEmailService())
+                ->enviarIngresoOrden($ordenId, $dispositivoId);
+
             return redirectView(
                 'tecnico/dispositivos/pool',
                 null,
@@ -324,9 +327,14 @@ class OrdenController extends BaseController
         $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
 
-        return $dompdf->stream(
-            'Orden_' . $orden['numero_orden'] . '.pdf',
-            ['Attachment' => false]
-        );
+        $pdf = $dompdf->output();
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader(
+                'Content-Disposition',
+                'inline; filename="Orden_' . $orden['numero_orden'] . '.pdf"'
+            )
+            ->setBody($pdf);
     }
 }

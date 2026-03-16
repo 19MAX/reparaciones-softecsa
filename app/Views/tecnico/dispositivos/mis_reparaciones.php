@@ -33,7 +33,8 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3">
                     <div class="d-flex align-items-center">
-                        <h4 class="card-title mb-0" style="font-size: 1rem; font-weight: 700;">Listado de mis Reparaciones</h4>
+                        <h4 class="card-title mb-0" style="font-size: 1rem; font-weight: 700;">Listado de mis
+                            Reparaciones</h4>
                     </div>
                 </div>
                 <div class="card-body">
@@ -55,17 +56,21 @@
                                 <?php foreach ($reparaciones as $rep): ?>
                                     <tr>
                                         <td>
-                                            <span class="badge bg-light text-dark border"><?= esc($rep['numero_orden']) ?></span>
+                                            <a href="<?= base_url('consulta/orden/' . $rep['numero_orden'] . '/' . $rep['id']) ?>"
+                                                target="_blank" rel="noopener noreferrer" title="Ver seguimiento"><span
+                                                    class="badge bg-light text-dark border"><?= esc($rep['numero_orden']) ?></span></a>
                                         </td>
                                         <td><?= date('d/m/y H:i', strtotime($rep['fecha_ingreso'])) ?></td>
-                                        <td><?= esc($rep['cliente_nombre']) ?> <?= esc($rep['cliente_apellido']) ?></td>
+                                        <td><?= esc($rep['cliente_nombre']) ?>     <?= esc($rep['cliente_apellido']) ?></td>
                                         <td>
                                             <div class="d-flex flex-column">
                                                 <span class="fw-bold text-dark"><?= esc($rep['marca']) ?>
                                                     <?= esc($rep['modelo']) ?></span>
-                                                <small class="text-muted" style="font-size: 0.75rem;"><?= esc($rep['tipo_dispositivo']) ?></small>
+                                                <small class="text-muted"
+                                                    style="font-size: 0.75rem;"><?= esc($rep['tipo_dispositivo']) ?></small>
                                                 <?php if ($rep['serie_imei']): ?>
-                                                    <small class="text-muted" style="font-size: 0.75rem;">SN: <?= esc($rep['serie_imei']) ?></small>
+                                                    <small class="text-muted" style="font-size: 0.75rem;">SN:
+                                                        <?= esc($rep['serie_imei']) ?></small>
                                                 <?php endif; ?>
                                             </div>
                                         </td>

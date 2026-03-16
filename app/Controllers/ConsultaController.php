@@ -4,121 +4,227 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\DispositivoModel;
+use App\Models\DispositivosOrdenModel;
 use App\Models\HistorialDispositivoModel;
+use App\Models\OrdenesModel;
 use App\Models\OrdenTrabajoModel;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class ConsultaController extends BaseController
 {
+    protected $ordenModel;
+    protected $dispositivoModel;
+
+    public function __construct()
+    {
+        $this->ordenModel = new OrdenesModel();
+        $this->dispositivoModel = new DispositivosOrdenModel();
+    }
+
     public function verOrden($codigoOrden)
     {
-        $ordenModel = new OrdenTrabajoModel();
-        $dispositivoModel = new DispositivoModel();
-        $historialModel = new HistorialDispositivoModel();
+        $orden = $this->getSeguimientoDispositivos($codigoOrden);
 
-        // 1. Buscar la orden
-        $orden = $ordenModel->select('ordenes_trabajo.*, c.nombres, c.apellidos')
-            ->join('clientes as c', 'c.id = ordenes_trabajo.cliente_id')
-            ->where('ordenes_trabajo.codigo_orden', $codigoOrden)
-            ->first();
-
-        if (!$orden) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound("Orden no encontrada");
-        }
-
-        // 2. Obtener dispositivos + Tipo de Dispositivo (Iconos/Nombres)
-        $dispositivos = $dispositivoModel->select('dispositivos.*, td.nombre as nombre_tipo, td.icono')
-            ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left')
-            ->where('orden_id', $orden['id'])
-            ->findAll();
-
-        // 3. Inyectar el HISTORIAL a cada dispositivo
-        foreach ($dispositivos as &$disp) {
-            // Buscamos el historial visible para el cliente (o todo, según tu preferencia)
-            // Asumimos que quieres mostrar solo lo marcado como "visible_cliente" o todo.
-            // Aquí traigo todo, pero tú puedes filtrar ->where('es_visible_cliente', 1)
-            $disp['historial'] = $historialModel
-                ->select('historial_dispositivos.*, u.nombres as tecnico_nombre')
-                ->join('usuarios as u', 'u.id = historial_dispositivos.usuario_id', 'left')
-                ->where('dispositivo_id', $disp['id'])
-                ->orderBy('created_at', 'DESC') // Lo más reciente primero
-                ->findAll();
-        }
-
-        // 4. Calcular Progreso Visual basado en tus Constantes (Helpers)
-        // Definimos un porcentaje visual aproximado para la barra
-        $estado = (int) $orden['estado'];
-        $progreso = 10; // Default: Abierta
-
-        switch ($estado) {
-            case ESTADO_ORDEN_ABIERTA:
-                $progreso = 10;
-                break;
-            case ESTADO_ORDEN_EN_PROCESO:
-                $progreso = 40;
-                break;
-            case ESTADO_ORDEN_ESPERANDO_REPUESTO:
-                $progreso = 50;
-                break;
-            case ESTADO_ORDEN_LISTA_RETIRO:
-                $progreso = 90;
-                break;
-            case ESTADO_ORDEN_ENTREGADA:
-                $progreso = 100;
-                break;
-            case ESTADO_ORDEN_GARANTIA:
-                $progreso = 100;
-                break; // Barra llena pero color distinto
-            case ESTADO_ORDEN_CANCELADA:
-                $progreso = 100;
-                break; // Barra llena pero roja
-        }
-
-        return view('publico/tracking_orden', [
-            'orden' => $orden,
-            'dispositivos' => $dispositivos,
-            'progreso' => $progreso
-        ]);
+        return view('publico/tracking_orden', $orden);
     }
+
     public function buscarPorCedula()
     {
         $cedula = $this->request->getGet('cedula');
+
         $ordenes = [];
-        $clienteInfo = null;
+        $cliente = null;
+        $data = [
+            'ordenes' => $ordenes,
+            'cliente' => $cliente
+        ];
 
         if (!empty($cedula)) {
-            $ordenModel = new \App\Models\OrdenTrabajoModel();
+            $data = $this->getOrdenesPorCedula($cedula);
 
-            // 1. Buscar Órdenes
-            $ordenes = $ordenModel->select('ordenes_trabajo.*, c.nombres, c.apellidos')
-                ->join('clientes as c', 'c.id = ordenes_trabajo.cliente_id')
-                ->where('c.cedula', $cedula)
-                ->orderBy('ordenes_trabajo.created_at', 'DESC')
-                ->findAll();
+        }
+        return view('publico/busqueda_cedula', [
+            'ordenes' => $data['ordenes'] ?? null,
+            'cedula_buscada' => $cedula,
+            'cliente' => $data['cliente'] ?? null
+        ]);
+    }
 
-            if (!empty($ordenes)) {
-                $clienteInfo = [
-                    'nombres' => $ordenes[0]['nombres'],
-                    'apellidos' => $ordenes[0]['apellidos']
-                ];
+    /**
+     * Busca todas las órdenes de un cliente por su cédula.
+     * Retorna: número de orden, estado, nombre del cliente
+     * y los dispositivos de cada orden (tipo, marca, modelo).
+     */
+    public function getOrdenesPorCedula(string $cedula): array
+    {
+        $db = \Config\Database::connect();
 
-                $dispositivoModel = new \App\Models\DispositivoModel();
+        // 1. Buscar cliente
+        $cliente = $db->table('clientes')
+            ->select(['id', 'nombres', 'telefono', 'cedula'])
+            ->where('cedula', $cedula)
+            ->get()
+            ->getRowArray();
 
-                // 2. Cargar dispositivos con su TIPO e ICONO
-                foreach ($ordenes as &$orden) {
-                    $orden['dispositivos'] = $dispositivoModel
-                        ->select('dispositivos.*, td.nombre as nombre_tipo, td.icono') // <--- AGREGADO
-                        ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left') // <--- AGREGADO
-                        ->where('orden_id', $orden['id'])
-                        ->findAll();
-                }
-            }
+        if (!$cliente) {
+            return [];
         }
 
-        return view('publico/busqueda_cedula', [
-            'ordenes' => $ordenes,
-            'cedula_buscada' => $cedula,
-            'cliente' => $clienteInfo
-        ]);
+        // 2. Obtener ordenes
+        $ordenes = $db->table('ordenes o')
+            ->select([
+                'o.id',
+                'o.numero_orden',
+                'o.estado',
+                'o.created_at AS fecha_ingreso'
+            ])
+            ->where('o.cliente_id', $cliente['id'])
+            ->orderBy('o.created_at', 'DESC')
+            ->get()
+            ->getResultArray();
+
+        if (empty($ordenes)) {
+            return [
+                'cliente' => $cliente,
+                'ordenes' => []
+            ];
+        }
+
+        // 3. Obtener dispositivos
+        $ordenIds = array_column($ordenes, 'id');
+
+        $dispositivos = $db->table('dispositivos_orden do')
+            ->select([
+                'do.id',
+                'do.orden_id',
+                'do.estado AS dispositivo_estado',
+                'td.nombre AS tipo_dispositivo',
+                'm.nombre AS marca',
+                'COALESCE(mo.nombre, do.modelo_texto) AS modelo'
+            ])
+            ->join('tipos_dispositivo td', 'td.id = do.tipo_dispositivo_id')
+            ->join('marcas m', 'm.id = do.marca_id')
+            ->join('modelos mo', 'mo.id = do.modelo_id', 'left')
+            ->whereIn('do.orden_id', $ordenIds)
+            ->orderBy('do.id', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        // 4. Agrupar dispositivos
+        $dispositivosPorOrden = [];
+
+        foreach ($dispositivos as $disp) {
+            $dispositivosPorOrden[$disp['orden_id']][] = $disp;
+        }
+
+        foreach ($ordenes as &$orden) {
+            $orden['dispositivos'] = $dispositivosPorOrden[$orden['id']] ?? [];
+        }
+
+        // 5. Respuesta final
+        return [
+            'cliente' => $cliente,
+            'ordenes' => $ordenes
+        ];
+    }
+
+
+    /**
+     * Retorna el seguimiento público de un dispositivo:
+     * historial de estados con observaciones visibles al cliente.
+     *
+     * Se identifica por número de orden + id del dispositivo
+     * para evitar que alguien acceda con un id arbitrario.
+     */
+    public function getSeguimientoDispositivos(string $codigoOrden): ?array
+    {
+        $db = \Config\Database::connect();
+
+        // 1. Obtener datos de la orden y cliente
+        $orden = $db->table('ordenes o')
+            ->select([
+                'o.id',
+                'o.numero_orden AS codigo_orden',
+                'c.nombres AS cliente_nombre'
+            ])
+            ->join('clientes c', 'c.id = o.cliente_id')
+            ->where('o.numero_orden', $codigoOrden)
+            ->get()
+            ->getRowArray();
+
+        if (!$orden) {
+            return null;
+        }
+
+        // 2. Obtener dispositivos de la orden
+        $dispositivos = $db->table('dispositivos_orden do')
+            ->select([
+                'do.id',
+                'do.estado',
+                'do.fecha_estimada_entrega',
+                'do.fecha_real_entrega',
+                'do.created_at AS fecha_ingreso',
+                'td.nombre AS tipo_dispositivo',
+                'm.nombre AS marca',
+                'COALESCE(mo.nombre, do.modelo_texto) AS modelo',
+            ])
+            ->join('tipos_dispositivo td', 'td.id = do.tipo_dispositivo_id')
+            ->join('marcas m', 'm.id = do.marca_id')
+            ->join('modelos mo', 'mo.id = do.modelo_id', 'left')
+            ->where('do.orden_id', $orden['id'])
+            ->get()
+            ->getResultArray();
+
+        // Inicializamos las variables para nuestro resumen
+        $totalDispositivos = count($dispositivos);
+        $conteoEstados = [];
+
+        foreach ($dispositivos as &$dispositivo) {
+
+            // Lógica para contar los estados
+            // Convertimos a minúsculas y reemplazamos espacios por guiones bajos para estandarizar las claves (ej: "En Proceso" -> "en_proceso")
+            $estadoKey = strtolower(str_replace(' ', '_', $dispositivo['estado']));
+
+            if (!isset($conteoEstados[$estadoKey])) {
+                $conteoEstados[$estadoKey] = 0;
+            }
+            $conteoEstados[$estadoKey]++;
+
+            // Historial
+            $dispositivo['historial'] = $db->table('historial_estados')
+                ->select([
+                    'id',
+                    'estado_anterior',
+                    'estado_nuevo',
+                    'observacion_cliente',
+                    'created_at AS fecha'
+                ])
+                ->where('dispositivo_orden_id', $dispositivo['id'])
+                ->orderBy('created_at', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            // Problemas
+            $dispositivo['problemas'] = $db->table('dispositivo_problemas dp')
+                ->select([
+                    'p.nombre AS problema',
+                    'dp.observacion'
+                ])
+                ->join('problemas p', 'p.id = dp.problema_id')
+                ->where('dp.dispositivo_orden_id', $dispositivo['id'])
+                ->get()
+                ->getResultArray();
+        }
+
+        return [
+            'codigo_orden' => $orden['codigo_orden'],
+            'cliente_nombre' => $orden['cliente_nombre'],
+            'dispositivos' => $dispositivos,
+            // Agregamos el resumen al arreglo que se retorna a la vista
+            'resumen' => [
+                'total' => $totalDispositivos,
+                'estados' => $conteoEstados
+            ]
+        ];
     }
 }

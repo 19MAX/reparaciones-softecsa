@@ -119,7 +119,6 @@ class DispositivoController extends BaseController
             'listaTecnicos' => $listaTecnicos,
         ];
 
-        log_message('debug', 'Detalle dispositivo: ' . print_r($dispositivo, true));
         return view('admin/dispositivos/detalles', $data);
     }
 
@@ -175,6 +174,8 @@ class DispositivoController extends BaseController
             'observacion' => 'Su dispositivo está siendo atendido por nuestro técnico.',
         ]);
 
+        (new \App\Services\ReparacionEmailService())
+            ->iniciarReparacion($dispositivoId, $estado, 'Su dispositivo está siendo atendido por nuestro técnico');
         $db->transComplete();
         model('App\Models\OrdenesModel')->recalcularEstado($dispositivo['orden_id']);
 
@@ -184,7 +185,6 @@ class DispositivoController extends BaseController
 
     public function finalizarReparacion()
     {
-        log_message('debug', print_r($this->request->getPost(), true));
         $dispositivoId = (int) $this->request->getPost('dispositivo_id');
         $comentario = trim($this->request->getPost('comentario') ?? '');
         $notaTecnica = trim($this->request->getPost('nota_tecnica') ?? '');
@@ -357,6 +357,10 @@ class DispositivoController extends BaseController
 
         $msg = ($nuevoEstado === 'cancelado') ? 'Reparación cancelada/no reparable.' : 'Reparación finalizada. Dispositivo listo para entrega.';
 
+
+        (new \App\Services\ReparacionEmailService())
+            ->enviarFinalizacion($dispositivoId, $nuevoEstado, $comentario);
+
         return $this->response->setJSON([
             'success' => true,
             'message' => $msg,
@@ -439,7 +443,8 @@ class DispositivoController extends BaseController
         // Recalcular estado de la orden
         $ordenModel = new \App\Models\OrdenesModel();
         $ordenModel->recalcularEstado($dispositivo['orden_id']);
-
+        (new \App\Services\ReparacionEmailService())
+            ->enviarEntrega($dispositivoId);
         return $this->response->setJSON([
             'success' => true,
             'message' => 'Dispositivo marcado como entregado.',

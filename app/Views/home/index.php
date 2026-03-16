@@ -410,7 +410,7 @@
               pueden tomar 3-5 días. Te mantenemos informado en todo momento.</p>
           </div>
         </div>
-        <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+        <!-- <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
           <button class="w-full p-6 text-left flex justify-between items-center hover:bg-gray-800 transition-colors"
             onclick="toggleFaq(this)">
             <span class="text-xl font-semibold">¿Ofrecen garantía?</span>
@@ -423,7 +423,7 @@
             <p class="text-gray-400">Sí, todas nuestras reparaciones incluyen garantía de 90 días en mano de obra y
               repuestos instalados.</p>
           </div>
-        </div>
+        </div> -->
         <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
           <button class="w-full p-6 text-left flex justify-between items-center hover:bg-gray-800 transition-colors"
             onclick="toggleFaq(this)">
@@ -518,8 +518,8 @@
             </div>
             <div>
               <h3 class="text-xl font-semibold mb-2">Ubicación</h3>
-              <p class="text-gray-400">Guayaquil, Ecuador</p>
-              <p class="text-gray-500 text-sm">Centro de la ciudad</p>
+              <p class="text-gray-400">Guaranda, Ecuador</p>
+              <p class="text-gray-500 text-sm">7 DE MAYO Y OLMEDO</p>
             </div>
           </div>
         </div>

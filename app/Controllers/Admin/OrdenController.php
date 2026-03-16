@@ -396,6 +396,9 @@ class OrdenController extends BaseController
                 throw new \Exception('Error de base de datos al confirmar la orden.');
             }
 
+            (new \App\Services\ReparacionEmailService())
+                ->enviarIngresoOrden($ordenId, $dispositivoId);
+
             // ÉXITO: Redirigimos al listado (o a imprimir)
             return redirectView('admin/ordenes', null, [['Orden ' . $numeroOrden . ' generada exitosamente', 'success', 'top-end']], null);
 
@@ -579,7 +582,7 @@ class OrdenController extends BaseController
                 ->orderBy('id', 'DESC')
                 ->limit(1)
                 ->get()->getRowArray();
-            
+
             $dev['comentario_cliente'] = $ultimaObs['observacion_cliente'] ?? null;
         }
         unset($dev);
@@ -651,10 +654,15 @@ class OrdenController extends BaseController
         $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
 
-        return $dompdf->stream(
-            'Orden_' . $orden['numero_orden'] . '.pdf',
-            ['Attachment' => false]   // false = abrir en navegador, true = descargar
-        );
+        $pdf = $dompdf->output();
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader(
+                'Content-Disposition',
+                'inline; filename="Orden_' . $orden['numero_orden'] . '.pdf"'
+            )
+            ->setBody($pdf);
     }
 
 

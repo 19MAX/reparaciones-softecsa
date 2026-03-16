@@ -223,6 +223,10 @@ class DispositivoController extends BaseController
         $db->transComplete();
         model('App\Models\OrdenesModel')->recalcularEstado($dispositivo['orden_id']);
 
+        (new \App\Services\ReparacionEmailService())
+            ->iniciarReparacion($dispositivoId, $estado, 'Su dispositivo está siendo atendido por nuestro técnico');
+        $db->transComplete();
+
         return $this->response->setJSON(['success' => true, 'message' => 'Reparación iniciada correctamente.', 'estado' => $estado]);
     }
 
@@ -350,7 +354,95 @@ class DispositivoController extends BaseController
 
         $msg = ($nuevoEstado === 'cancelado') ? 'Reparación cancelada/no reparable.' : 'Reparación finalizada. Dispositivo listo para entrega.';
 
+        (new \App\Services\ReparacionEmailService())
+            ->enviarFinalizacion($dispositivoId, $nuevoEstado, $comentario);
         return $this->response->setJSON(['success' => true, 'message' => $msg, 'estado' => $nuevoEstado]);
+    }
+
+
+    public function entregarDispositivo()
+    {
+        $dispositivoId = (int) $this->request->getPost('dispositivo_id');
+
+        if (!$dispositivoId) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'ID de dispositivo no proporcionado.',
+            ])->setStatusCode(422);
+        }
+
+        $dispositivosModel = model('DispositivosOrdenModel');
+        $historialModel = new \App\Models\HistorialEstados();
+        $db = \Config\Database::connect();
+
+        $dispositivo = $dispositivosModel->find($dispositivoId);
+
+        if (!$dispositivo) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Dispositivo no encontrado.',
+            ])->setStatusCode(404);
+        }
+
+        if ($dispositivo['estado'] !== 'listo') {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Solo se puede entregar un dispositivo que esté en estado "listo".',
+            ])->setStatusCode(422);
+        }
+
+        $ahora = date('Y-m-d H:i:s');
+        $currentUserId = session('id_usuario');
+        $currentUserRol = session('role');
+
+        $db->transStart();
+
+        // ── LÓGICA DE TOMA DE CONTROL (Takeover) ──
+        // Si el Admin entrega y no es el técnico asignado, se le re-asigna (aunque ya esté terminado)
+        if ($currentUserRol === 'admin' && $dispositivo['tecnico_id'] != $currentUserId) {
+            $dispositivosModel->update($dispositivoId, ['tecnico_id' => $currentUserId]);
+            $historialModel->insert([
+                'dispositivo_orden_id' => $dispositivoId,
+                'estado_anterior' => $dispositivo['estado'],
+                'estado_nuevo' => $dispositivo['estado'],
+                'usuario_id' => $currentUserId,
+                'observacion' => 'El Administrador ha tomado el control del dispositivo para su entrega final.',
+            ]);
+        }
+
+        $dispositivosModel->update($dispositivoId, [
+            'estado' => 'entregado',
+            'fecha_real_entrega' => $ahora,
+        ]);
+
+        $historialModel->insert([
+            'dispositivo_orden_id' => $dispositivoId,
+            'estado_anterior' => $dispositivo['estado'],
+            'estado_nuevo' => 'entregado',
+            'usuario_id' => session('id_usuario'),
+            'observacion' => 'Dispositivo entregado al cliente.',
+        ]);
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error al actualizar el estado del dispositivo.',
+            ])->setStatusCode(500);
+        }
+
+        // Recalcular estado de la orden
+        $ordenModel = new \App\Models\OrdenesModel();
+        $ordenModel->recalcularEstado($dispositivo['orden_id']);
+        (new \App\Services\ReparacionEmailService())
+            ->enviarEntrega($dispositivoId);
+        return $this->response->setJSON([
+            'success' => true,
+            'message' => 'Dispositivo marcado como entregado.',
+            'estado' => 'entregado',
+            'fecha_real' => $ahora,
+        ]);
     }
 
     private function _getMesesDisponibles($db, int $tecnicoId): array

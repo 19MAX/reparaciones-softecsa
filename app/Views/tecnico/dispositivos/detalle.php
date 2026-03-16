@@ -755,9 +755,9 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
                         <i class="fas fa-check me-1"></i> Finalizar Reparación
                     </button>
                 <?php elseif ($estado === 'listo'): ?>
-                    <div class="dv-delivered-badge" style="background:#d1fae5;color:#065f46;">
-                        <i class="fas fa-check-double me-1"></i> Listo para entrega
-                    </div>
+                    <button class="dv-btn-action btn-deliver" onclick="entregarDispositivo(<?= $dispositivo['id'] ?>)">
+                        <i class="fas fa-box-open me-1"></i> Entregar al Cliente
+                    </button>
                 <?php elseif ($estado === 'entregado'): ?>
                     <div class="dv-delivered-badge"><i class="fas fa-check-circle me-1"></i> Dispositivo entregado</div>
                 <?php else: ?>
@@ -1224,7 +1224,8 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
                                 <?= esc($dispositivo['clave_acceso']) ?>
                             </div>
                             <p style="font-size:.8rem;color:var(--text-muted);margin-top:6px;">
-                                <?= ucfirst(esc($dispositivo['tipo_pass'])) ?></p>
+                                <?= ucfirst(esc($dispositivo['tipo_pass'])) ?>
+                            </p>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -1270,11 +1271,11 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
         let icon = 'question';
 
         if (tecnicoIdAsignado && tecnicoIdAsignado != currentUserId) {
-            showAlert('error', 'Este dispositivo ya está asignado a otro técnico.', 'center'); 
+            showAlert('error', 'Este dispositivo ya está asignado a otro técnico.', 'center');
             return;
         } else if (!tecnicoIdAsignado) {
-            title = 'Tomar Reparación'; 
-            text = 'No hay técnico asignado. Al iniciar, quedarás como responsable de la reparación.'; 
+            title = 'Tomar Reparación';
+            text = 'No hay técnico asignado. Al iniciar, quedarás como responsable de la reparación.';
             icon = 'info';
         }
 
@@ -1298,10 +1299,42 @@ $tienePass = $dispositivo['tipo_pass'] !== 'sin_clave'
     }
 
     /* ── Entregar dispositivo (NO PERMITIDO PARA TECNICO DESDE AQUI, PERO DEJAMOS LA LOGICA) ────────────────────── */
+
+    /* ── Entregar dispositivo ────────────────────── */
     function entregarDispositivo(id) {
-        // En teoria, el técnico no puede entregar, si se requiere, se llamaria al endpoint
-        showAlert('warning', 'La entrega de dispositivos debe ser realizada por recepción o administración.', 'center');
+        const tecnicoIdAsignado = <?= json_encode($dispositivo['tecnico_id']) ?>;
+        const currentUserId = <?= json_encode(session('id_usuario')) ?>;
+        const userRole = <?= json_encode(session('role')) ?>;
+        const tecnicoNombre = <?= json_encode($dispositivo['tecnico_nombre'] ?? 'otro técnico') ?>;
+
+        let title = '¿Entregar al cliente?';
+        let text = 'Esta acción marcará el dispositivo como entregado.';
+        let icon = 'question';
+
+        if (tecnicoIdAsignado && tecnicoIdAsignado != currentUserId && userRole === 'admin') {
+            title = 'Intervenir para Entrega'; text = 'El dispositivo fue reparado por ' + tecnicoNombre + '. Al entregarlo tú, quedarás como responsable de la entrega final.'; icon = 'warning';
+        }
+
+        Swal.fire({
+            title, text, icon,
+            showCancelButton: true, confirmButtonText: 'Confirmar entrega', cancelButtonText: 'Cancelar',
+            confirmButtonColor: icon === 'warning' ? '#f59e0b' : '#0ea5e9'
+        })
+            .then(res => {
+                if (!res.isConfirmed) return;
+                fetch('<?= base_url('tecnico/dispositivos/reparacion/entregar') ?>', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `dispositivo_id=${id}`
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) { showAlert('success', 'Dispositivo entregado', 'top-end'); setTimeout(() => location.reload(), 1000); }
+                        else showAlert('error', data.message, 'center');
+                    });
+            });
     }
+
 
     /* ── Cancelar reparación ─────────────────────── */
     function cancelarReparacion(id) {
