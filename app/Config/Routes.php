@@ -44,6 +44,7 @@ $routes->group('admin', ['filter' => 'auth'], function (RouteCollection $routes)
         $routes->post('crear', 'Admin\OrdenController::guardar');
         $routes->post('guardar', 'Admin\OrdenController::guardar');
         $routes->get('imprimir/(:num)', 'Admin\OrdenController::imprimir/$1');
+        $routes->get('imprimir/(:num)/(:any)', 'Admin\OrdenController::imprimir/$1/$2');
         $routes->get('entregar/(:num)', 'Admin\OrdenController::entregar/$1');
         $routes->get('dispositivos/(:num)', 'Admin\OrdenController::getDispositivosOrden/$1');
     });
@@ -169,6 +170,7 @@ $routes->group('tecnico', ['filter' => 'auth'], function ($routes) {
         $routes->get('crear', 'Tecnico\OrdenController::crear');
         $routes->post('guardar', 'Tecnico\OrdenController::guardar');
         $routes->get('imprimir/(:num)', 'Tecnico\OrdenController::imprimir/$1');
+        $routes->get('imprimir/(:num)/(:any)', 'Tecnico\OrdenController::imprimir/$1/$2');
     });
 
     // Dispositivos

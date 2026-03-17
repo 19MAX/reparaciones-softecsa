@@ -46,18 +46,18 @@ Detalles del Cliente
                     <div class="name"><?= esc($cliente['nombres'] . ' ' . $cliente['apellidos']) ?></div>
                     <div class="job">Cliente</div>
                     <div class="desc">Cédula/RUC: <?= esc($cliente['cedula']) ?></div>
-                    
+
                     <div class="view-profile mt-4">
                         <ul class="list-group list-group-unbordered text-start">
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <span><i class="fas fa-phone text-muted me-2"></i> Teléfono:</span>
                                 <b><?= esc($cliente['telefono']) ?></b>
                             </li>
-                            <?php if(!empty($cliente['telefono_secundario'])): ?>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span><i class="fas fa-phone-alt text-muted me-2"></i> Teléfono Sec.:</span>
-                                <b><?= esc($cliente['telefono_secundario']) ?></b>
-                            </li>
+                            <?php if (!empty($cliente['telefono_secundario'])): ?>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-phone-alt text-muted me-2"></i> Teléfono Sec.:</span>
+                                    <b><?= esc($cliente['telefono_secundario']) ?></b>
+                                </li>
                             <?php endif; ?>
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <span><i class="fas fa-envelope text-muted me-2"></i> Email:</span>
@@ -94,16 +94,17 @@ Detalles del Cliente
                                 <th>N° Orden</th>
                                 <th>Fecha</th>
                                 <th>Estado</th>
-                                <th>Ver</th>
+                                <th>Imprimir</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if(empty($ordenes)): ?>
+                            <?php if (empty($ordenes)): ?>
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">Este cliente no tiene órdenes registradas.</td>
+                                    <td colspan="4" class="text-center text-muted">Este cliente no tiene órdenes
+                                        registradas.</td>
                                 </tr>
                             <?php else: ?>
-                                <?php foreach($ordenes as $orden): ?>
+                                <?php foreach ($ordenes as $orden): ?>
                                     <tr>
                                         <td class="fw-bold">
                                             <a href="<?= base_url('tecnico/ordenes/imprimir/' . $orden['id']) ?>">
@@ -113,9 +114,36 @@ Detalles del Cliente
                                         <td><?= date('d/m/Y', strtotime($orden['created_at'])) ?></td>
                                         <td><?= estadoPill($orden['estado']) ?></td>
                                         <td>
-                                            <a href="<?= base_url('tecnico/ordenes/imprimir/' . $orden['id']) ?>" class="btn btn-icon btn-round btn-primary btn-sm">
-                                                <i class="fa fa-eye"></i>
-                                            </a>
+                                            <div class="dropdown">
+                                                <a class="dropdown-toggle" href="#"
+                                                    role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
+
+                                                <ul class="dropdown-menu">
+                                                    <li>
+                                                        <a class="dropdown-item"
+                                                            href="<?= base_url('tecnico/ordenes/imprimir/' . $orden['id'] . '/carta') ?>"
+                                                            target="_blank">
+                                                            Carta
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item"
+                                                            href="<?= base_url('tecnico/ordenes/imprimir/' . $orden['id'] . '/ticket') ?>"
+                                                            target="_blank">
+                                                            Ticket
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item"
+                                                            href="<?= base_url('tecnico/ordenes/imprimir/' . $orden['id']) ?>"
+                                                            target="_blank">
+                                                            Completo
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -131,7 +159,7 @@ Detalles del Cliente
 
 <?= $this->section('scripts') ?>
 <script>
-    $(document).ready(function() {
+    $(document).ready(function () {
         $('#tabla-ordenes-cliente').DataTable({
             "pageLength": 5,
             "order": [[1, "desc"]],

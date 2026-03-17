@@ -153,7 +153,7 @@ class OrdenController extends BaseController
             $clienteInfo = $clienteModel->find($clienteId);
             $cedulaCliente = $clienteInfo['cedula'] ?? '';
 
-            $urlPdf = base_url('tecnico/ordenes/imprimir/' . $ordenId);
+            $urlPdf = base_url('tecnico/ordenes/imprimir/' . $ordenId . '/ticket');
 
             (new \App\Services\ReparacionEmailService())
                 ->enviarIngresoOrden($ordenId, $dispositivoId);
@@ -161,7 +161,16 @@ class OrdenController extends BaseController
             return redirectView(
                 'tecnico/dispositivos/pool',
                 null,
-                [['Orden ' . $numeroOrden . ' generada correctamente', 'success', 'center', $numeroOrden, $urlPdf, $cedulaCliente]],
+                [
+                    [
+                        'Orden ' . $numeroOrden . ' generada correctamente',
+                        'success',
+                        'center',
+                        base_url('tecnico/ordenes/imprimir/' . $ordenId . '/ticket'),
+                        base_url('tecnico/ordenes/imprimir/' . $ordenId . '/carta'),
+                        base_url('tecnico/ordenes/imprimir/' . $ordenId)
+                    ]
+                ],
                 null
             );
 
@@ -171,7 +180,7 @@ class OrdenController extends BaseController
         }
     }
 
-    public function imprimir(int $ordenId)
+    public function imprimir(int $ordenId, ?string $tipoImpresion = null)
     {
         $db = \Config\Database::connect();
 
@@ -268,7 +277,7 @@ class OrdenController extends BaseController
                 ->orderBy('id', 'DESC')
                 ->limit(1)
                 ->get()->getRowArray();
-            
+
             $dev['comentario_cliente'] = $ultimaObs['observacion_cliente'] ?? null;
         }
         unset($dev);
@@ -301,7 +310,9 @@ class OrdenController extends BaseController
             $terminos = [
                 'El taller no se hace responsable por daños preexistentes no reportados al momento del ingreso del equipo.',
                 'El cliente debe retirar su equipo dentro de los 30 días posteriores a la notificación de reparación completada.',
-                'El presupuesto aprobado incluye únicamente los trabajos descritos en esta orden.',
+                'Los equipos no retirados en el plazo indicado podrán generar costos de almacenamiento.',
+                'La garantía de reparación cubre únicamente la falla reparada y tiene una duración de 30 días.',
+                'El retiro del equipo implica la aceptación del trabajo realizado y el monto cobrado.',
             ];
         }
 
@@ -321,12 +332,33 @@ class OrdenController extends BaseController
         $options->set('chroot', FCPATH);
 
         $dompdf = new Dompdf($options);
-        $html = view('admin/ordenes/pdf_orden', $data);
+
+        // ── 9. Definir variables por defecto (A4 Horizontal) ───
+        $vista = 'admin/ordenes/pdf_orden';
+        $tamanioPapel = 'A4';
+        $orientacion = 'landscape';
+
+        // ── 10. Modificar según el tipo de impresión ───────────
+        if ($tipoImpresion === 'ticket') {
+            $vista = 'admin/pdf/orden_ticket';
+            // 226.77 puntos = 80mm (ancho ideal para ticketeras térmicas)
+            // 800 puntos de alto (lo puedes aumentar si la orden es muy larga)
+            $tamanioPapel = [0, 0, 226.77, 800];
+            $orientacion = 'portrait';
+        } elseif ($tipoImpresion === 'carta') {
+            $vista = 'admin/pdf/orden_carta';
+            $tamanioPapel = 'carta';
+            $orientacion = 'portrait';
+        }
+
+        // ── 11. Renderizado Unificado (DRY) ────────────────────
+        $html = view($vista, $data);
 
         $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->setPaper($tamanioPapel, $orientacion);
         $dompdf->render();
 
+        // ── 12. Generar y retornar el PDF ──────────────────────
         $pdf = $dompdf->output();
 
         return $this->response

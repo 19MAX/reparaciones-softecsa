@@ -129,15 +129,15 @@ Panel de Control
                 <?php else: ?>
                     <p class="op-7">Sin actividad registrada aún.</p>
                 <?php endif; ?>
-                
+
                 <div class="separator-dashed"></div>
-                
+
                 <h5 class="mt-3 b-b1 pb-2 mb-3 fw-bold">Comisiones del Mes</h5>
                 <ul class="list-unstyled">
                     <?php if (!empty($stats['comisionesMes'])): ?>
                         <?php foreach ($stats['comisionesMes'] as $com): ?>
                             <li class="d-flex justify-content-between pb-1 pt-1 border-bottom border-white border-opacity-10">
-                                <small><?= esc($com['nombre']) ?> <?= esc($com['apellido']) ?></small> 
+                                <small><?= esc($com['nombre']) ?>         <?= esc($com['apellido']) ?></small>
                                 <span>$<?= number_format($com['total_comision'], 2) ?></span>
                             </li>
                         <?php endforeach; ?>
@@ -171,10 +171,42 @@ Panel de Control
                         <tbody>
                             <?php foreach ($stats['ordenesRecientes'] as $ord): ?>
                                 <tr>
-                                    <td><a href="<?= base_url('admin/ordenes/imprimir/' . $ord['id']) ?>" target="_blank" class="fw-bold"><?= esc($ord['numero_orden']) ?></a></td>
-                                    <td><?= esc($ord['nombres']) ?> <?= esc($ord['apellidos']) ?></td>
                                     <td>
-                                        <span class="badge badge-<?= $ord['estado'] === 'entregado' ? 'success' : ($ord['estado'] === 'cancelado' ? 'danger' : 'info') ?>">
+                                        <div class="dropdown">
+                                            <a class="fw-bold dropdown-toggle" href="#" role="button"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                                <?= esc($ord['numero_orden']) ?>
+                                            </a>
+
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a class="dropdown-item"
+                                                        href="<?= base_url('admin/ordenes/imprimir/' . $ord['id'] . '/carta') ?>"
+                                                        target="_blank">
+                                                        Carta
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item"
+                                                        href="<?= base_url('admin/ordenes/imprimir/' . $ord['id'] . '/ticket') ?>"
+                                                        target="_blank">
+                                                        Ticket
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item"
+                                                        href="<?= base_url('admin/ordenes/imprimir/' . $ord['id']) ?>"
+                                                        target="_blank">
+                                                        Completo
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                    <td><?= esc($ord['nombres']) ?>     <?= esc($ord['apellidos']) ?></td>
+                                    <td>
+                                        <span
+                                            class="badge badge-<?= $ord['estado'] === 'entregado' ? 'success' : ($ord['estado'] === 'cancelado' ? 'danger' : 'info') ?>">
                                             <?= ucfirst($ord['estado']) ?>
                                         </span>
                                     </td>
@@ -215,7 +247,7 @@ Panel de Control
     // ── GRÁFICO DE INGRESOS (LINE) ─────────────────────────
     const incomeCtx = document.getElementById('incomeChart').getContext('2d');
     const incomeData = <?= json_encode($stats['ventasSieteDias']) ?>;
-    
+
     new Chart(incomeCtx, {
         type: 'line',
         data: {
@@ -240,26 +272,26 @@ Panel de Control
 
     // ── GRÁFICO DE TIPOS (PIE/DOUGHNUT) ─────────────────────
     <?php if (!empty($stats['tiposMasReparados'])): ?>
-    const typeCtx = document.getElementById('deviceTypeChart').getContext('2d');
-    const typeData = <?= json_encode($stats['tiposMasReparados']) ?>;
-    
-    new Chart(typeCtx, {
-        type: 'doughnut',
-        data: {
-            labels: typeData.map(d => d.nombre),
-            datasets: [{
-                data: typeData.map(d => d.total),
-                backgroundColor: ['#1d7af3', '#f3545d', '#fdaf4b', '#59d05d', '#177dff']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'right' }
+        const typeCtx = document.getElementById('deviceTypeChart').getContext('2d');
+        const typeData = <?= json_encode($stats['tiposMasReparados']) ?>;
+
+        new Chart(typeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: typeData.map(d => d.nombre),
+                datasets: [{
+                    data: typeData.map(d => d.total),
+                    backgroundColor: ['#1d7af3', '#f3545d', '#fdaf4b', '#59d05d', '#177dff']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' }
+                }
             }
-        }
-    });
+        });
     <?php endif; ?>
 </script>
 <?= $this->endSection() ?>

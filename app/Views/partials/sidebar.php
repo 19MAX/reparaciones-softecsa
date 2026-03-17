@@ -216,7 +216,7 @@
 
                     <li class="nav-item <?= strpos(current_url(), 'tecnico/dispositivos/mis-reparaciones') !== false ? 'active' : '' ?>">
                         <a href="<?= base_url('tecnico/dispositivos/mis-reparaciones') ?>">
-                            <i class="fas fa-tools"></i>
+                            <i class="fas fa-toolbox"></i>
                             <p>Mis Reparaciones</p>
                         </a>
                     </li>

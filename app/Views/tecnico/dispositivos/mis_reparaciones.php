@@ -43,11 +43,11 @@
                             <thead class="table-light text-muted" style="font-size: 0.8rem; text-transform: uppercase;">
                                 <tr>
                                     <th>Orden</th>
-                                    <th>Fecha Ingreso</th>
+                                    <!-- <th>Fecha Ingreso</th> -->
                                     <th>Cliente</th>
                                     <th>Equipo</th>
                                     <th>Estado</th>
-                                    <th>Est. Entrega</th>
+                                    <!-- <th>Est. Entrega</th> -->
                                     <th>Total</th>
                                     <th>Acción</th>
                                 </tr>
@@ -56,11 +56,11 @@
                                 <?php foreach ($reparaciones as $rep): ?>
                                     <tr>
                                         <td>
-                                            <a href="<?= base_url('consulta/orden/' . $rep['numero_orden'] . '/' . $rep['id']) ?>"
+                                            <a href="<?= base_url('consulta/orden/' . $rep['numero_orden']) ?>"
                                                 target="_blank" rel="noopener noreferrer" title="Ver seguimiento"><span
                                                     class="badge bg-light text-dark border"><?= esc($rep['numero_orden']) ?></span></a>
                                         </td>
-                                        <td><?= date('d/m/y H:i', strtotime($rep['fecha_ingreso'])) ?></td>
+                                        <!-- <td><?= date('d/m/y H:i', strtotime($rep['fecha_ingreso'])) ?></td> -->
                                         <td><?= esc($rep['cliente_nombre']) ?>     <?= esc($rep['cliente_apellido']) ?></td>
                                         <td>
                                             <div class="d-flex flex-column">
@@ -77,9 +77,9 @@
                                         <td>
                                             <?= estadoPill($rep['estado']) ?>
                                         </td>
-                                        <td>
+                                        <!-- <td>
                                             <?= $rep['fecha_estimada_entrega'] ? date('d/m/y', strtotime($rep['fecha_estimada_entrega'])) : '—' ?>
-                                        </td>
+                                        </td> -->
                                         <td class="fw-bold text-success">
                                             $<?= number_format($rep['precio_total'], 2) ?>
                                         </td>
@@ -110,7 +110,8 @@
             "order": [[1, "desc"]], // Ordenar por fecha de ingreso por defecto
             "language": {
                 "url": "https://cdn.datatables.net/plug-ins/2.3.6/i18n/es-ES.json"
-            }
+            },
+            "scrollX": true
         });
     });
 </script>

@@ -57,17 +57,17 @@
          $type = $message[1];
          $msg = $message[0];
          $position = $message[2] ?? 'top-end';
-         $codigo = $message[3] ?? null;
-         $urlConsulta = $message[4] ?? null;
-         $cedula = $message[5] ?? null;
+         $urlTicket = $message[3] ?? null;
+         $urlCarta = $message[4] ?? null;
+         $urlCompleto = $message[5] ?? null;
          ?>
          showAlert(
-            <?= json_encode($type ?? "") ?>,
-            <?= json_encode($msg ?? "") ?>,
-            <?= json_encode($position ?? "") ?>,
-            <?= json_encode($codigo ?? "") ?>,
-            <?= json_encode($urlConsulta ?? "") ?>,
-            <?= json_encode($cedula ?? "") ?>
+            <?= json_encode($type) ?>,
+            <?= json_encode($msg) ?>,
+            <?= json_encode($position) ?>,
+            <?= json_encode($urlTicket) ?>,
+            <?= json_encode($urlCarta) ?>,
+            <?= json_encode($urlCompleto) ?>
          );
       <?php endforeach; ?>
    <?php endif; ?>

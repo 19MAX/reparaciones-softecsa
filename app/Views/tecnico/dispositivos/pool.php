@@ -21,7 +21,8 @@ Pool de Dispositivos (Sin Asignar)
     <div class="col-md-12">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white py-3">
-                <h4 class="card-title mb-0" style="font-size: 1rem; font-weight: 700;">Dispositivos Pendientes de Reparación</h4>
+                <h4 class="card-title mb-0" style="font-size: 1rem; font-weight: 700;">Dispositivos Pendientes de
+                    Reparación</h4>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -40,25 +41,29 @@ Pool de Dispositivos (Sin Asignar)
                             <?php foreach ($sinAsignar as $dev): ?>
                                 <tr>
                                     <td>
-                                        <span class="badge bg-light text-dark border"><?= esc($dev['codigo_orden']) ?></span>
+                                        <a href="<?= base_url('consulta/orden/' . $dev['codigo_orden']) ?>" target="_blank"
+                                            rel="noopener noreferrer" title="Ver seguimiento"><span
+                                                class="badge bg-light text-dark border"><?= esc($dev['codigo_orden']) ?></span></a>
                                     </td>
                                     <td>
                                         <?= date('d/m/y H:i', strtotime($dev['created_at'])) ?>
                                     </td>
                                     <td>
-                                        <div class="fw-bold text-dark"><?= esc($dev['marca']) ?> <?= esc($dev['modelo']) ?></div>
-                                        <div class="text-muted" style="font-size: 0.75rem;"><?= esc($dev['tipo_dispositivo']) ?></div>
+                                        <div class="fw-bold text-dark"><?= esc($dev['marca']) ?>     <?= esc($dev['modelo']) ?>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">
+                                            <?= esc($dev['tipo_dispositivo']) ?></div>
                                     </td>
                                     <td>
-                                        <?= esc($dev['cliente_nombre']) ?> <?= esc($dev['cliente_apellido']) ?>
+                                        <?= esc($dev['cliente_nombre']) ?>     <?= esc($dev['cliente_apellido']) ?>
                                     </td>
                                     <td>
                                         <?= estadoPill($dev['estado']) ?>
                                     </td>
                                     <td class="text-end">
-                                        <a href="<?= base_url('tecnico/dispositivos/detalle/' . $dev['id']) ?>" 
-                                           class="btn btn-sm btn-primary">
-                                           Ver Detalle / Tomar Reparación
+                                        <a href="<?= base_url('tecnico/dispositivos/detalle/' . $dev['id']) ?>"
+                                            class="btn btn-sm btn-primary">
+                                            Ver Detalle / Tomar Reparación
                                         </a>
                                     </td>
                                 </tr>

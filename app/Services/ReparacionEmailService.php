@@ -4,6 +4,9 @@ namespace App\Services;
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\Writer\PngWriter;
 
 class ReparacionEmailService
 {
@@ -23,14 +26,14 @@ class ReparacionEmailService
     /**
      * Al INICIAR reparación → envía el PDF de la orden como adjunto.
      */
-    public function enviarIngresoOrden(int $ordenId, int $dispositivoId): bool
+    public function enviarIngresoOrden(int $ordenId, int $dispositivoId, ?string $tipoImpresion = 'ticket'): bool
     {
         $datos = $this->getDatosDispositivo($dispositivoId);
         if (!$datos || empty($datos['cliente_email'])) {
             return false;
         }
 
-        $pdfBytes = $this->generarPdfOrden($ordenId);
+        $pdfBytes = $this->generarPdfOrden($ordenId, $tipoImpresion);
 
         $asunto = "📋 Orden {$datos['codigo_orden']} recibida — {$this->empresaConfig['nombre_empresa']}";
 
@@ -176,7 +179,7 @@ class ReparacionEmailService
      * Genera el PDF de una orden en memoria (igual que imprimir() pero
      * devuelve los bytes en lugar de hacer stream al navegador).
      */
-    private function generarPdfOrden(int $ordenId): string
+    private function generarPdfOrden(int $ordenId, ?string $tipoImpresion = 'ticket'): string
     {
         $db = \Config\Database::connect();
 
@@ -273,28 +276,62 @@ class ReparacionEmailService
         }
         if (empty($terminos)) {
             $terminos = [
-                'El taller no se hace responsable por daños preexistentes no reportados.',
-                'Retira tu equipo en 30 días desde la notificación de reparación completada.',
-                'La garantía cubre la falla reparada por 30 días.',
+                'El taller no se hace responsable por daños preexistentes no reportados al momento del ingreso del equipo.',
+                'El cliente debe retirar su equipo dentro de los 30 días posteriores a la notificación de reparación completada.',
+                'Los equipos no retirados en el plazo indicado podrán generar costos de almacenamiento.',
+                'La garantía de reparación cubre únicamente la falla reparada y tiene una duración de 30 días.',
+                'El retiro del equipo implica la aceptación del trabajo realizado y el monto cobrado.',
             ];
         }
 
-        $html = view('admin/ordenes/pdf_orden', [
+        $urlSeguimiento = base_url("consulta/orden/" . $orden['numero_orden']);
+        $qrCodeBase64 = (new Builder(
+            writer: new PngWriter(),
+            writerOptions: [],
+            validateResult: false,
+            data: $urlSeguimiento,
+            encoding: new Encoding('UTF-8'),
+            size: 100,
+            margin: 0
+        ))->build()->getDataUri();
+
+        // Agrupamos los datos en un solo array para que sea más limpio
+        $dataVista = [
             'orden' => $orden,
             'dispositivos' => $dispositivos,
-            'qr_code' => '',           // sin QR en el email para simplificar
+            'qr_code' => $qrCodeBase64,           // sin QR en el email para simplificar
             'empresa_config' => $this->empresaConfig,
             'terminos' => $terminos,
-        ]);
+        ];
 
+        // ── Inicializar Dompdf ──
         $options = new Options();
         $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
         $options->set('chroot', FCPATH);
 
         $dompdf = new Dompdf($options);
+
+        // ── Validaciones de formato ──
+        $vista = 'admin/ordenes/pdf_orden';
+        $tamanioPapel = 'A4';
+        $orientacion = 'landscape';
+
+        if ($tipoImpresion === 'ticket') {
+            $vista = 'admin/pdf/orden_ticket';
+            $tamanioPapel = [0, 0, 226.77, 800];
+            $orientacion = 'portrait';
+        } elseif ($tipoImpresion === 'carta') {
+            $vista = 'admin/pdf/orden_carta';
+            $tamanioPapel = 'carta';
+            $orientacion = 'portrait';
+        }
+
+        // ── Renderizado ──
+        $html = view($vista, $dataVista);
+
         $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->setPaper($tamanioPapel, $orientacion);
         $dompdf->render();
 
         return $dompdf->output(); // bytes en memoria, sin stream

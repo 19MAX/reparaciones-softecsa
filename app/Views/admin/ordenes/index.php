@@ -88,12 +88,37 @@
                                         </td>
                                         <td>
                                             <div class="form-button-action">
-                                                <a href="<?= base_url('admin/ordenes/imprimir/' . $orden['id']) ?>"
-                                                    target="_blank" class="btn btn-link btn-secondary" data-bs-toggle="tooltip"
-                                                    title="Imprimir Ticket">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
 
+                                                <div class="dropdown d-inline">
+                                                    <a class="btn btn-link btn-secondary dropdown-toggle" href="#" role="button"
+                                                        data-bs-toggle="dropdown" aria-expanded="false" title="Imprimir">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item"
+                                                                href="<?= base_url('admin/ordenes/imprimir/' . $orden['id'] . '/carta') ?>"
+                                                                target="_blank">
+                                                                Carta
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item"
+                                                                href="<?= base_url('admin/ordenes/imprimir/' . $orden['id'] . '/ticket') ?>"
+                                                                target="_blank">
+                                                                Ticket
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item"
+                                                                href="<?= base_url('admin/ordenes/imprimir/' . $orden['id']) ?>"
+                                                                target="_blank">
+                                                                Completo
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
 
                                                 <a href="<?= base_url('admin/ordenes/editar/' . $orden['id']) ?>"
                                                     class="btn btn-link btn-primary" data-bs-toggle="tooltip"

@@ -65,19 +65,6 @@
                                                 <i class="fa fa-eye"></i>
                                             </a>
 
-                                            <!-- Botón Editar -->
-                                            <button type="button" data-bs-toggle="modal" data-bs-target="#modalEditarCliente"
-                                                title="" class="btn btn-link btn-primary btn-lg"
-                                                data-original-title="Editar" onclick="llenarModalEditar(<?= htmlspecialchars(json_encode($cli)) ?>)">
-                                                <i class="fa fa-edit"></i>
-                                            </button>
-
-                                            <!-- Botón Eliminar -->
-                                            <button type="button" data-bs-toggle="modal" data-bs-target="#modalEliminarCliente"
-                                                title="" class="btn btn-link btn-danger" data-original-title="Eliminar"
-                                                onclick="llenarModalEliminar(<?= $cli['id'] ?>)">
-                                                <i class="fa fa-times"></i>
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>
