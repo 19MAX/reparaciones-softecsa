@@ -331,7 +331,7 @@ class DispositivoController extends BaseController
             }
         }
 
-        // ── Actualizar dispositivo ────────────────────────────
+        // ── Actualizar dispositivo ────────────────────
         $dispositivosModel->update($dispositivoId, [
             'estado' => $nuevoEstado,
             'precio_total' => $precioTotal,
@@ -348,6 +348,35 @@ class DispositivoController extends BaseController
             'observacion' => $notaTecnica ?: 'Cambio de estado a ' . $nuevoEstado,
             'observacion_cliente' => $comentario,
         ]);
+
+        // ── Registrar comisión en pagos_tecnicos ──────────────────────────────
+        if ($nuevoEstado === 'listo' && $comision > 0) {
+            $tecnicoIdPago = $dispositivo['tecnico_id'];
+            $tecnicoConfigPago = $db->table('tecnicos_config')
+                ->where('usuario_id', $tecnicoIdPago)
+                ->get()->getRowArray();
+
+            $existe = $db->table('pagos_tecnicos')
+                ->where('dispositivo_orden_id', $dispositivoId)
+                ->countAllResults();
+
+            if (!$existe && $tecnicoConfigPago) {
+                $db->table('pagos_tecnicos')->insert([
+                    'dispositivo_orden_id' => $dispositivoId,
+                    'tecnico_id'           => $tecnicoIdPago,
+                    'monto_comision'       => $comision,
+                    'tipo_comision'        => $tecnicoConfigPago['tipo_comision'],
+                    'porcentaje_aplicado'  => $tecnicoConfigPago['tipo_comision'] === 'porcentaje'
+                                                ? $tecnicoConfigPago['valor_comision']
+                                                : null,
+                    'mano_obra_base'       => $totalManoObra,
+                    'estado_pago'          => 'pendiente',
+                    'fecha_reparacion'     => $ahora,
+                    'created_at'           => $ahora,
+                    'updated_at'           => $ahora,
+                ]);
+            }
+        }
 
         $db->transComplete();
 

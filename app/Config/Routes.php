@@ -127,6 +127,17 @@ $routes->group('admin', ['filter' => 'auth'], function (RouteCollection $routes)
     $routes->get('dispositivos/ver-tecnico/(:num)/comisiones', 'Admin\DispositivoController::comisionesPorMes/$1');
     $routes->get('dispositivos/ver-tecnico/(:num)/ingresos', 'Admin\DispositivoController::dispositivosPorMes/$1');
 
+
+    $routes->group('pagos-tecnicos', function ($routes) {
+        // Listado principal (Bitácora)
+        $routes->get('/', 'Admin\PagosTecnicosController::index');
+
+        $routes->post('validar', 'Admin\PagosTecnicosController::validar');
+        $routes->post('marcar-pagado', 'Admin\PagosTecnicosController::marcarPagado');
+        $routes->post('validar-lote', 'Admin\PagosTecnicosController::validarLote');
+        $routes->get('tecnico/(:num)', 'Admin\PagosTecnicosController::historialTecnico/$1');
+    });
+
 });
 
 $routes->group('recepcionista', function ($routes) {

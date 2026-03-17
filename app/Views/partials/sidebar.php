@@ -131,6 +131,12 @@
                             <p>Historial</p>
                         </a>
                     </li>
+                    <li class="nav-item <?= strpos(current_url(), 'admin/pagos-tecnicos') !== false ? 'active' : '' ?>">
+                        <a href="<?= base_url('admin/pagos-tecnicos') ?>">
+                            <i class="fas fa-money-bill-wave"></i>
+                            <p>Pagos a Técnicos</p>
+                        </a>
+                    </li>
 
                 <?php elseif ($userRole === 'recepcionista'): ?>
                     <!-- SIDEBAR RECEPCIONISTA -->
@@ -221,6 +227,12 @@
                         </a>
                     </li>
 
+                    <li class="nav-item <?= strpos(current_url(), 'tecnico/ingresos') !== false ? 'active' : '' ?>">
+                        <a href="<?= base_url('tecnico/ingresos') ?>">
+                            <i class="fas fa-money-bill-wave"></i>
+                            <p>Mis Ingresos</p>
+                        </a>
+                    </li>
                 <?php endif; ?>
 
             </ul>
