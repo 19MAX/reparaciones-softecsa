@@ -6,11 +6,15 @@ use App\Controllers\BaseController;
 use App\Models\OrdenesModel;
 use App\Models\DispositivosOrdenModel;
 use App\Models\DispositivoProblemaModel;
+use App\Models\DispositivoAccesorios;
+use App\Models\DispositivoDetalles;
 use App\Models\ClienteModel;
 use App\Models\TipoDispositivoModel;
 use App\Models\PrioridadModel;
 use App\Models\UsuarioModel;
 use App\Models\HistorialEstados;
+use App\Models\ProblemaModel;
+use App\Models\PreciosBaseModel;
 
 // Imports para QR y PDF
 use Dompdf\Dompdf;
@@ -27,6 +31,11 @@ class OrdenController extends BaseController
     protected $prioridadModel;
     protected $usuarioModel;
     protected $tipoDispositivoModel;
+    protected $dispositivoProblemaModel;
+    protected $dispositivosAccesoriosModel;
+    protected $dispositivoDetallesModel;
+    protected $historialEstadosModel;
+    protected $problemaModel;
 
     public function __construct()
     {
@@ -35,6 +44,11 @@ class OrdenController extends BaseController
         $this->prioridadModel = new PrioridadModel();
         $this->usuarioModel = new UsuarioModel();
         $this->tipoDispositivoModel = new TipoDispositivoModel();
+        $this->dispositivoProblemaModel = new DispositivoProblemaModel();
+        $this->dispositivosAccesoriosModel = new DispositivoAccesorios();
+        $this->dispositivoDetallesModel = new DispositivoDetalles();
+        $this->historialEstadosModel = new HistorialEstados();
+        $this->problemaModel = new ProblemaModel();
     }
 
     public function crear()
@@ -71,69 +85,186 @@ class OrdenController extends BaseController
                 'estado' => 'pendiente',
             ];
 
-            $ordenId = $this->ordenModel->insert($ordenData);
+            $this->ordenModel->insert($ordenData);
+            $ordenId = $this->ordenModel->getInsertID();
 
-            $historialModel = new HistorialEstados();
-            $dispositivoProblemaModel = new DispositivoProblemaModel();
+            if (!$ordenId) {
+                throw new \RuntimeException('No se pudo crear la orden.');
+            }
 
             foreach ($devices as $dev) {
-                // Mapear los campos del formulario a la estructura de la base de datos (dispositivos_orden)
-                $tipoSeguridad = 'sin_clave';
-                if (isset($dev['tipo_pass'])) {
-                    if (in_array($dev['tipo_pass'], ['patron', 'contrasena', 'pin', 'huella'])) {
-                        $tipoSeguridad = $dev['tipo_pass'];
+                // --- 5.1 Limpiar y tipar datos del dispositivo -------------
+                $tipoId = (int) ($dev['tipo_dispositivo_id'] ?? 0);
+                $marcaId = (int) ($dev['marca_id'] ?? 0);
+                $modeloId = !empty($dev['modelo_id']) ? (int) $dev['modelo_id'] : null;
+                $tecnicoId = !empty($dev['tecnico_id']) ? (int) $dev['tecnico_id'] : null;
+                $prioridadId = !empty($dev['prioridad_dispositivo_id']) ? (int) $dev['prioridad_dispositivo_id'] : null;
+                $serieImei = !empty($dev['serie_imei']) ? trim($dev['serie_imei']) : null;
+                $tipoPass = $dev['tipo_pass'] ?? 'sin_clave';
+                $passCode = null;
+                $observaciones = trim($dev['observaciones'] ?? '');
+                $problemaIds = $dev['problema_reportado'] ?? [];
+                $accesorioIds = $dev['accesorios'] ?? [];
+                $detalleIds = $dev['detalles'] ?? [];
+
+                if ($tipoId === 0 || $marcaId === 0) {
+                    throw new \RuntimeException('Tipo de dispositivo y marca son obligatorios.');
+                }
+
+                if (empty($problemaIds)) {
+                    throw new \RuntimeException('Debe indicar al menos un problema por dispositivo.');
+                }
+
+                // --- 5.2 Manejar contraseña/patrón -------------------------
+                if ($tipoPass !== 'sin_clave' && $tipoPass !== 'huella') {
+                    $rawPass = $tipoPass === 'patron'
+                        ? ($dev['patron_data'] ?? '')
+                        : ($dev['pass_code'] ?? '');
+
+                    // Cifrar con AES-256-CBC usando APP_KEY como clave
+                    if (!empty($rawPass)) {
+                        $key = hex2bin(substr(hash('sha256', env('encryption.key')), 0, 64));
+                        $iv = openssl_random_pseudo_bytes(16);
+                        $cifrado = openssl_encrypt($rawPass, 'AES-256-CBC', $key, 0, $iv);
+                        $passCode = base64_encode($iv . '::' . $cifrado);
                     }
                 }
 
-                $claveAcceso = null;
-                if ($tipoSeguridad === 'contrasena' || $tipoSeguridad === 'pin') {
-                    $claveAcceso = $dev['pass_code'] ?? null;
-                } elseif ($tipoSeguridad === 'patron') {
-                    $claveAcceso = $dev['patron_data'] ?? null;
+                // --- 5.3 Obtener costo de prioridad ------------------------
+                $costoPrioridad = 0.00;
+                if ($prioridadId) {
+                    $prioridad = $this->prioridadModel->find($prioridadId);
+                    $costoPrioridad = (float) ($prioridad['costo_adicional'] ?? 0);
                 }
 
-                $dispData = [
+                // --- 5.4 Calcular precios y tiempo por cada problema -------
+                $problemasData = [];
+                $tiempoTotalHoras = 0.00;
+                $totalManoObra = 0.00;
+                $totalRepuesto = 0.00;
+
+                foreach ($problemaIds as $probId) {
+                    $probId = (int) $probId;
+
+                    // Obtener datos del problema del catálogo
+                    $problema = $db->table('problemas')
+                        ->where('id', $probId)
+                        ->where('activo', 1)
+                        ->get()->getRowArray();
+
+                    if (!$problema) {
+                        throw new \RuntimeException("Problema ID {$probId} no encontrado o inactivo.");
+                    }
+
+                    // Buscar precio: primero por modelo específico, luego genérico
+                    $precio = null;
+                    if ($modeloId) {
+                        $precio = $db->table('precios_base')
+                            ->where('problema_id', $probId)
+                            ->where('modelo_id', $modeloId)
+                            ->get()->getRowArray();
+                    }
+                    // Fallback: precio genérico sin modelo
+                    if (!$precio) {
+                        $precio = $db->table('precios_base')
+                            ->where('problema_id', $probId)
+                            ->where('modelo_id IS NULL', null, false)
+                            ->get()->getRowArray();
+                    }
+
+                    $precioMO = (float) ($precio['precio_mano_obra'] ?? 0);
+                    $precioRep = (float) ($precio['precio_repuesto'] ?? 0);
+                    $tiempoHrs = (float) $problema['tiempo_reparacion_horas'];
+
+                    $tiempoTotalHoras += $tiempoHrs;
+                    $totalManoObra += $precioMO;
+                    $totalRepuesto += $precioRep;
+
+                    $problemasData[] = [
+                        'problema_id' => $probId,
+                        'tiempo_reparacion_horas' => $tiempoHrs,
+                        'precio_mano_obra' => $precioMO,
+                        'precio_repuesto' => $precioRep,
+                        'observacion' => null,
+                    ];
+                }
+
+                $precioTotal = $totalManoObra + $totalRepuesto + $costoPrioridad;
+
+                // --- 5.5 Calcular fecha estimada de entrega ----------------
+                $fechaEstimada = $this->calcularFechaEntrega(
+                    $tecnicoId,
+                    $tiempoTotalHoras,
+                    $prioridadId,
+                    $db
+                );
+
+                // --- 5.6 Insertar dispositivo_orden ------------------------
+                $dispositivoId = $this->dispositivoModel->insert([
                     'orden_id' => $ordenId,
-                    'tipo_dispositivo_id' => $dev['tipo_dispositivo_id'] ?? null,
-                    'marca_id' => $dev['marca_id'] ?? null,
-                    'modelo_id' => (isset($dev['modelo_id']) && is_numeric($dev['modelo_id'])) ? $dev['modelo_id'] : null,
-                    'modelo_texto' => (isset($dev['modelo_id']) && !is_numeric($dev['modelo_id'])) ? $dev['modelo_id'] : null,
-                    'serie_imei' => $dev['serie_imei'] ?? null,
-                    'tipo_seguridad' => $tipoSeguridad,
-                    'clave_acceso' => $claveAcceso,
-                    'relato_cliente' => $dev['observaciones'] ?? null,
+                    'tipo_dispositivo_id' => $tipoId,
+                    'marca_id' => $marcaId,
+                    'modelo_id' => $modeloId,
+                    'modelo_texto' => null,
+                    'serie_imei' => $serieImei,
+                    'prioridad_id' => $prioridadId,
+                    'tecnico_id' => $tecnicoId,
+                    'relato_cliente' => $observaciones ?: null,
+                    'tipo_seguridad' => $tipoPass,
+                    'clave_acceso' => $passCode,
+                    'costo_prioridad' => $costoPrioridad,
+                    'precio_total' => $precioTotal,
+                    'tiempo_total_horas' => $tiempoTotalHoras,
+                    'comision_tecnico' => null,
+                    'fecha_estimada_entrega' => $fechaEstimada,
+                    'fecha_real_entrega' => null,
                     'estado' => 'pendiente',
-                    'prioridad_id' => !empty($dev['prioridad_dispositivo_id']) ? $dev['prioridad_dispositivo_id'] : null,
-                    'costo_prioridad' => 0.00,
-                    'tecnico_id' => !empty($dev['tecnico_id']) ? $dev['tecnico_id'] : null,
-                ];
+                ]);
 
-                if (!empty($dispData['prioridad_id'])) {
-                    $prioInfo = $this->prioridadModel->find($dispData['prioridad_id']);
-                    if ($prioInfo) {
-                        $dispData['costo_prioridad'] = $prioInfo['costo_adicional'];
-                        if ($prioInfo['tiempo_maximo_horas'] > 0) {
-                            $dispData['fecha_estimada_entrega'] = date('Y-m-d H:i:s', strtotime("+{$prioInfo['tiempo_maximo_horas']} hours"));
-                        }
+                if (!$dispositivoId) {
+                    throw new \RuntimeException('No se pudo registrar el dispositivo.');
+                }
+
+                // --- 5.7 Insertar problemas (dispositivo_problemas) --------
+                foreach ($problemasData as &$pd) {
+                    $pd['dispositivo_orden_id'] = $dispositivoId;
+                }
+                unset($pd);
+
+                if (!$this->dispositivoProblemaModel->insertBatch($problemasData)) {
+                    throw new \RuntimeException('No se pudieron registrar los problemas del dispositivo.');
+                }
+
+                // --- 5.8 Insertar accesorios -------------------------------
+                if (!empty($accesorioIds)) {
+                    $accesoriosInsert = array_map(fn($aid) => [
+                        'dispositivo_orden_id' => $dispositivoId,
+                        'accesorio_id' => (int) $aid,
+                        'accesorio_texto' => null,
+                        'cantidad' => 1,
+                        'observacion' => null,
+                    ], $accesorioIds);
+
+                    if (!$this->dispositivosAccesoriosModel->insertBatch($accesoriosInsert)) {
+                        throw new \RuntimeException('No se pudieron registrar los accesorios.');
                     }
                 }
 
-                $dispositivoId = $this->dispositivoModel->insert($dispData);
+                // --- 5.9 Insertar detalles físicos -------------------------
+                if (!empty($detalleIds)) {
+                    $detallesInsert = array_map(fn($did) => [
+                        'dispositivo_orden_id' => $dispositivoId,
+                        'detalle_id' => (int) $did,
+                        'detalle_texto' => null,
+                    ], $detalleIds);
 
-                if (!empty($dev['problema_reportado']) && is_array($dev['problema_reportado'])) {
-                    foreach ($dev['problema_reportado'] as $probId) {
-                        if (is_numeric($probId)) {
-                            $dispositivoProblemaModel->insert([
-                                'dispositivo_orden_id' => $dispositivoId,
-                                'problema_id' => $probId,
-                                'precio_mano_obra' => 0,
-                                'precio_repuesto' => 0
-                            ]);
-                        }
+                    if (!$this->dispositivoDetallesModel->insertBatch($detallesInsert)) {
+                        throw new \RuntimeException('No se pudieron registrar los detalles físicos.');
                     }
                 }
 
-                $historialModel->insert([
+                // --- 5.10 Registrar historial de estado inicial ------------
+                $this->historialEstadosModel->insert([
                     'dispositivo_orden_id' => $dispositivoId,
                     'estado_anterior' => null,
                     'estado_nuevo' => 'pendiente',
@@ -178,6 +309,81 @@ class OrdenController extends BaseController
             log_message('error', '[Tecnico/OrdenController::guardar] ' . $e->getMessage());
             return redirectView('tecnico/ordenes/crear', null, [['Error: ' . $e->getMessage(), 'error', 'top-end']]);
         }
+    }
+
+    private function calcularFechaEntrega(?int $tecnicoId, float $horasNecesarias, ?int $prioridadId, $db): string
+    {
+        // 1. Determinar carga inicial
+        $horasCarga = 0;
+        if ($tecnicoId) {
+            $carga = $db->table('dispositivos_orden')
+                ->selectSum('tiempo_total_horas', 'total')
+                ->whereIn('estado', ['pendiente', 'en_proceso'])
+                ->where('tecnico_id', $tecnicoId)
+                ->get()->getRow();
+            $horasCarga = (float) ($carga->total ?? 0);
+        } else {
+            // COLA GENERAL: Si no hay técnico, sumamos todo lo pendiente del taller
+            $cargaGeneral = $db->table('dispositivos_orden')
+                ->selectSum('tiempo_total_horas', 'total')
+                ->whereIn('estado', ['pendiente'])
+                ->where('tecnico_id', null)
+                ->get()->getRow();
+            $horasCarga = (float) ($cargaGeneral->total ?? 24); // Mínimo 24h de diagnóstico si está vacío
+        }
+
+        $horasTotales = $horasCarga + $horasNecesarias;
+
+        // 2. Motor de tiempo laboral (Iterativo)
+        $fechaActual = new \DateTime();
+        $horasRestantes = $horasTotales;
+
+        // Traer horarios de la base de datos para no hacer consultas en el loop
+        $horarios = $db->table('horarios_atencion')->get()->getResultArray();
+        $configHoras = [];
+        foreach ($horarios as $h) {
+            $configHoras[$h['dia_semana']] = $h;
+        }
+
+        while ($horasRestantes > 0) {
+            $diaActual = (int) $fechaActual->format('w');
+
+            // Si el día está cerrado, saltar al siguiente día a las 00:00
+            if (!isset($configHoras[$diaActual]) || $configHoras[$diaActual]['abierto'] == 0) {
+                $fechaActual->modify('+1 day')->setTime(0, 0);
+                continue;
+            }
+
+            $apertura = new \DateTime($fechaActual->format('Y-m-d') . ' ' . $configHoras[$diaActual]['hora_apertura']);
+            $cierre = new \DateTime($fechaActual->format('Y-m-d') . ' ' . $configHoras[$diaActual]['hora_cierre']);
+
+            // Si la hora actual es antes de abrir, empezamos a contar desde la apertura
+            if ($fechaActual < $apertura) {
+                $fechaActual = clone $apertura;
+            }
+
+            // Si ya pasó la hora de cierre, saltar al día siguiente
+            if ($fechaActual >= $cierre) {
+                $fechaActual->modify('+1 day')->setTime(0, 0);
+                continue;
+            }
+
+            // Calcular cuánto tiempo queda disponible hoy
+            $intervaloA_Cierre = $fechaActual->diff($cierre);
+            $horasDisponiblesHoy = $intervaloA_Cierre->h + ($intervaloA_Cierre->i / 60);
+
+            if ($horasRestantes <= $horasDisponiblesHoy) {
+                // Terminamos dentro del horario de hoy
+                $fechaActual->modify("+" . round($horasRestantes * 60) . " minutes");
+                $horasRestantes = 0;
+            } else {
+                // Usamos lo que queda de hoy y saltamos al siguiente
+                $horasRestantes -= $horasDisponiblesHoy;
+                $fechaActual->modify('+1 day')->setTime(0, 0);
+            }
+        }
+
+        return $fechaActual->format('Y-m-d H:i:s');
     }
 
     public function imprimir(int $ordenId, ?string $tipoImpresion = null)
