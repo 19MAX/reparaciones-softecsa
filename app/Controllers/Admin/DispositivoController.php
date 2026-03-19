@@ -279,6 +279,42 @@ class DispositivoController extends BaseController
                     'observacion' => $observacion ?: null,
                 ]);
 
+                // ── Guardar repuestos detallados ──
+                if (!empty($prob['repuestos'])) {
+                    $dispositivoRepuestoModel = model('DispositivoRepuestoModel');
+                    $repuestoModel = model('RepuestoModel');
+                    
+                    foreach ($prob['repuestos'] as $rep) {
+                        $repId = !empty($rep['repuesto_id']) ? $rep['repuesto_id'] : null;
+
+                        // Si marcamos guardar en catálogo y no existe ID, creamos el repuesto
+                        if (!$repId && !empty($rep['guardar_catalogo'])) {
+                            $repId = $repuestoModel->insert([
+                                'nombre' => $rep['nombre'],
+                                'valor'  => $rep['valor_unitario'],
+                                'stock'  => 0, // o lo que se prefiera
+                            ]);
+                        }
+
+                        $dispositivoRepuestoModel->insert([
+                            'dispositivo_problema_id' => $probId,
+                            'repuesto_id'    => $repId,
+                            'nombre'         => $rep['nombre'],
+                            'cantidad'       => $rep['cantidad'],
+                            'valor_unitario' => $rep['valor_unitario'],
+                            'valor_total'    => (float)$rep['cantidad'] * (float)$rep['valor_unitario'],
+                        ]);
+
+                        // Opcional: Descontar stock si existe repuesto_id y es mayor a 0
+                        if ($repId) {
+                            $db->table('repuestos')
+                                ->where('id', $repId)
+                                ->where('stock >', 0)
+                                ->decrement('stock', $rep['cantidad']);
+                        }
+                    }
+                }
+
                 $totalManoObra += $mobraObra;
                 $totalRepuesto += $repuesto;
             }

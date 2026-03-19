@@ -120,6 +120,15 @@ $routes->group('admin', ['filter' => 'auth'], function (RouteCollection $routes)
         $routes->post('editar', 'Admin\HistorialController::editar'); // Editar comentario/visibilidad
         $routes->post('eliminar', 'Admin\HistorialController::eliminar'); // Eliminar registro
     });
+
+    $routes->group('repuestos', function ($routes) {
+        $routes->get('', 'Admin\RepuestosController::index');
+        $routes->post('crear', 'Admin\RepuestosController::crear');
+        $routes->post('editar', 'Admin\RepuestosController::editar');
+        $routes->post('eliminar', 'Admin\RepuestosController::eliminar');
+        $routes->get('buscar', 'Admin\RepuestosController::buscar'); // Para fetch/autocomplete
+    });
+
     // Dispositivos por técnico
     $routes->get('dispositivos', 'Admin\DispositivoController::index');
     $routes->get('dispositivos/mis-reparaciones', 'Admin\DispositivoController::misReparaciones');

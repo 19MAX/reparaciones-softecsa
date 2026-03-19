@@ -91,6 +91,11 @@
                                         <span class="sub-item">Configuración</span>
                                     </a>
                                 </li>
+                                <li class="<?= sidebar_class(sidebar_item_active('RepuestosController'), 'active') ?>">
+                                    <a href="<?= base_url('admin/repuestos') ?>">
+                                        <span class="sub-item">Repuestos</span>
+                                    </a>
+                                </li>
                                 <li class="<?= sidebar_class(sidebar_item_active('HorarioAtencionController'), 'active') ?>">
                                     <a href="<?= base_url('admin/horarios-atencion') ?>">
                                         <span class="sub-item">Horarios de atención</span>

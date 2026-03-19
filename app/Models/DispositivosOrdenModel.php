@@ -165,6 +165,12 @@ class DispositivosOrdenModel extends Model
 
             $prob['default_mano_obra'] = $precioBase['precio_mano_obra'] ?? 0;
             $prob['default_repuesto'] = $precioBase['precio_repuesto'] ?? 0;
+
+            // ── Cargar repuestos específicos de este problema ──
+            $prob['repuestos'] = $db->table('dispositivo_repuestos dr')
+                ->select('dr.nombre, dr.cantidad, dr.valor_unitario, dr.valor_total')
+                ->where('dr.dispositivo_problema_id', $prob['id'])
+                ->get()->getResultArray();
         }
         $dispositivo['problemas'] = $problemas;
 
