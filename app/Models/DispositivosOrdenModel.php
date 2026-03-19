@@ -54,6 +54,7 @@ class DispositivosOrdenModel extends Model
                 'do.serie_imei',
                 'do.estado',
                 'do.precio_total',
+                'do.comision_tecnico',
                 'do.fecha_estimada_entrega',
                 'do.created_at AS fecha_ingreso',
                 // Dispositivo

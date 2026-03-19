@@ -19,40 +19,60 @@ Panel de Control
 
 <!-- ── TARJETAS DE RESUMEN ───────────────────────── -->
 <div class="row">
-    <!-- CLIENTES -->
+    <!-- RECAUDADO -->
     <div class="col-sm-6 col-md-3">
         <div class="card card-stats card-round">
             <div class="card-body">
                 <div class="row align-items-center">
                     <div class="col-icon">
-                        <div class="icon-big text-center icon-primary bubble-shadow-small">
-                            <i class="fas fa-users"></i>
+                        <div class="icon-big text-center icon-secondary bubble-shadow-small">
+                            <i class="fas fa-dollar-sign"></i>
                         </div>
                     </div>
                     <div class="col col-stats ms-3 ms-sm-0">
                         <div class="numbers">
-                            <p class="card-category">Clientes</p>
-                            <h4 class="card-title"><?= number_format($stats['totalClientes']) ?></h4>
+                            <p class="card-category">Ingresos Totales</p>
+                            <h4 class="card-title">$<?= number_format($stats['recaudado'], 2) ?></h4>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- POR REPARAR -->
+    <!-- MANO DE OBRA -->
     <div class="col-sm-6 col-md-3">
         <div class="card card-stats card-round">
             <div class="card-body">
                 <div class="row align-items-center">
                     <div class="col-icon">
-                        <div class="icon-big text-center icon-info bubble-shadow-small">
-                            <i class="fas fa-tools"></i>
+                        <div class="icon-big text-center icon-primary bubble-shadow-small">
+                            <i class="fas fa-hand-holding-usd"></i>
                         </div>
                     </div>
                     <div class="col col-stats ms-3 ms-sm-0">
                         <div class="numbers">
-                            <p class="card-category">Por Reparar</p>
-                            <h4 class="card-title"><?= number_format($stats['porReparar']) ?></h4>
+                            <p class="card-category">Mano de Obra</p>
+                            <h4 class="card-title">$<?= number_format($stats['totalManoObra'], 2) ?></h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- REPUESTOS -->
+    <div class="col-sm-6 col-md-3">
+        <div class="card card-stats card-round">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-icon">
+                        <div class="icon-big text-center icon-warning bubble-shadow-small">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                    </div>
+                    <div class="col col-stats ms-3 ms-sm-0">
+                        <div class="numbers">
+                            <p class="card-category">Gasto Repuestos</p>
+                            <h4 class="card-title">$<?= number_format($stats['totalRepuestos'], 2) ?></h4>
                         </div>
                     </div>
                 </div>
@@ -73,26 +93,6 @@ Panel de Control
                         <div class="numbers">
                             <p class="card-category">Reparados</p>
                             <h4 class="card-title"><?= number_format($stats['reparados']) ?></h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- RECAUDADO -->
-    <div class="col-sm-6 col-md-3">
-        <div class="card card-stats card-round">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-icon">
-                        <div class="icon-big text-center icon-secondary bubble-shadow-small">
-                            <i class="fas fa-dollar-sign"></i>
-                        </div>
-                    </div>
-                    <div class="col col-stats ms-3 ms-sm-0">
-                        <div class="numbers">
-                            <p class="card-category">Ingresos Totales</p>
-                            <h4 class="card-title">$<?= number_format($stats['recaudado'], 2) ?></h4>
                         </div>
                     </div>
                 </div>
@@ -142,9 +142,15 @@ Panel de Control
                             </li>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <li class="op-7"><small>Sin comisiones este mes.</small></li>
+                        <li class="op-7 text-white"><small>Sin comisiones este mes.</small></li>
                     <?php endif; ?>
                 </ul>
+
+                <div class="separator-dashed"></div>
+                <div class="d-flex justify-content-between mt-3">
+                    <h5 class="fw-bold">Gasto Repuestos (Mes)</h5>
+                    <h5 class="fw-bold">$<?= number_format($stats['repuestosMes'], 2) ?></h5>
+                </div>
             </div>
         </div>
     </div>

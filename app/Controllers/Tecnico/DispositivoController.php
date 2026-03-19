@@ -118,7 +118,7 @@ class DispositivoController extends BaseController
     public function pool()
     {
         $db = \Config\Database::connect();
-        
+
         // Dispositivos sin asignar (para que el técnico los pueda tomar)
         $sinAsignar = $db->query("
             SELECT 
@@ -319,15 +319,23 @@ class DispositivoController extends BaseController
         } else {
             $precioTotal = $totalManoObra + $totalRepuesto + (float) $dispositivo['costo_prioridad'];
             $comision = 0.00;
-            $tecnicoConfig = $db->table('tecnicos_config')
-                ->where('usuario_id', $currentUserId)
+
+            // Verificar si el técnico es un técnico real (no admin) para calcular comisión
+            $tecnico = $db->table('usuarios')
+                ->where('id', $currentUserId)
                 ->get()->getRowArray();
 
-            if ($tecnicoConfig) {
-                $comision = $tecnicoConfig['tipo_comision'] === 'porcentaje'
-                    ? $totalManoObra * ((float) $tecnicoConfig['valor_comision'] / 100)
-                    : (float) $tecnicoConfig['valor_comision'];
-                $comision = round($comision, 2);
+            if ($tecnico && $tecnico['rol'] === 'tecnico') {
+                $tecnicoConfig = $db->table('tecnicos_config')
+                    ->where('usuario_id', $currentUserId)
+                    ->get()->getRowArray();
+
+                if ($tecnicoConfig) {
+                    $comision = $tecnicoConfig['tipo_comision'] === 'porcentaje'
+                        ? $totalManoObra * ((float) $tecnicoConfig['valor_comision'] / 100)
+                        : (float) $tecnicoConfig['valor_comision'];
+                    $comision = round($comision, 2);
+                }
             }
         }
 
@@ -361,17 +369,17 @@ class DispositivoController extends BaseController
             if (!$existe && $tecnicoConfigPago) {
                 $db->table('pagos_tecnicos')->insert([
                     'dispositivo_orden_id' => $dispositivoId,
-                    'tecnico_id'           => $currentUserId,
-                    'monto_comision'       => $comision,
-                    'tipo_comision'        => $tecnicoConfigPago['tipo_comision'],
-                    'porcentaje_aplicado'  => $tecnicoConfigPago['tipo_comision'] === 'porcentaje'
-                                                ? $tecnicoConfigPago['valor_comision']
-                                                : null,
-                    'mano_obra_base'       => $totalManoObra,
-                    'estado_pago'          => 'pendiente',
-                    'fecha_reparacion'     => $ahora,
-                    'created_at'           => $ahora,
-                    'updated_at'           => $ahora,
+                    'tecnico_id' => $currentUserId,
+                    'monto_comision' => $comision,
+                    'tipo_comision' => $tecnicoConfigPago['tipo_comision'],
+                    'porcentaje_aplicado' => $tecnicoConfigPago['tipo_comision'] === 'porcentaje'
+                        ? $tecnicoConfigPago['valor_comision']
+                        : null,
+                    'mano_obra_base' => $totalManoObra,
+                    'estado_pago' => 'pendiente',
+                    'fecha_reparacion' => $ahora,
+                    'created_at' => $ahora,
+                    'updated_at' => $ahora,
                 ]);
             }
         }
@@ -477,9 +485,18 @@ class DispositivoController extends BaseController
     private function _getMesesDisponibles($db, int $tecnicoId): array
     {
         $mesesEs = [
-            'January' => 'Enero', 'February' => 'Febrero', 'March' => 'Marzo', 'April' => 'Abril',
-            'May' => 'Mayo', 'June' => 'Junio', 'July' => 'Julio', 'August' => 'Agosto',
-            'September' => 'Septiembre', 'October' => 'Octubre', 'November' => 'Noviembre', 'December' => 'Diciembre',
+            'January' => 'Enero',
+            'February' => 'Febrero',
+            'March' => 'Marzo',
+            'April' => 'Abril',
+            'May' => 'Mayo',
+            'June' => 'Junio',
+            'July' => 'Julio',
+            'August' => 'Agosto',
+            'September' => 'Septiembre',
+            'October' => 'Octubre',
+            'November' => 'Noviembre',
+            'December' => 'Diciembre',
         ];
 
         $rows = $db->query("

@@ -13,19 +13,31 @@ class DashboardController extends BaseController
 
         // 1. Resumen de contadores básicos
         $totalClientes = $db->table('clientes')->countAllResults();
-        
+
         $dispositivosPorReparar = $db->table('dispositivos_orden')
             ->whereIn('estado', ['pendiente', 'en_proceso', 'pausado'])
             ->countAllResults();
-            
+
         $dispositivosReparados = $db->table('dispositivos_orden')
             ->whereIn('estado', ['listo', 'entregado'])
             ->countAllResults();
-            
-        $dineroRecaudado = $db->table('dispositivos_orden')
-            ->selectSum('precio_total')
+
+        $recaudadoData = $db->table('dispositivos_orden')
+            ->selectSum('precio_total', 'total')
             ->whereIn('estado', ['listo', 'entregado'])
-            ->get()->getRow()->precio_total ?? 0;
+            ->get()->getRow();
+        $dineroRecaudado = $recaudadoData->total ?? 0;
+
+        // 1.1 Detalle de Ingresos (Mano de Obra vs Repuestos)
+        $detallesIngresos = $db->table('dispositivo_problemas dp')
+            ->selectSum('dp.precio_mano_obra', 'mano_obra')
+            ->selectSum('dp.precio_repuesto', 'repuestos')
+            ->join('dispositivos_orden do', 'do.id = dp.dispositivo_orden_id')
+            ->whereIn('do.estado', ['listo', 'entregado'])
+            ->get()->getRow();
+
+        $totalManoObra = $detallesIngresos->mano_obra ?? 0;
+        $totalRepuestos = $detallesIngresos->repuestos ?? 0;
 
         // 2. Tipos de dispositivos más reparados
         $tiposMasReparados = $db->table('dispositivos_orden do')
@@ -58,6 +70,15 @@ class DashboardController extends BaseController
             ->groupBy('do.tecnico_id')
             ->get()->getResultArray();
 
+        // 4.1 Gastos de Repuestos (Mes actual)
+        $repuestosMes = $db->table('dispositivo_problemas dp')
+            ->selectSum('dp.precio_repuesto', 'total')
+            ->join('dispositivos_orden do', 'do.id = dp.dispositivo_orden_id')
+            ->where('MONTH(do.updated_at)', $mesActual)
+            ->where('YEAR(do.updated_at)', $anioActual)
+            ->whereIn('do.estado', ['listo', 'entregado'])
+            ->get()->getRow()->total ?? 0;
+
         // 5. Órdenes recientes
         $ordenesRecientes = $db->table('ordenes o')
             ->select('o.*, c.nombres, c.apellidos')
@@ -71,16 +92,16 @@ class DashboardController extends BaseController
         for ($i = 6; $i >= 0; $i--) {
             $fecha = date('Y-m-d', strtotime("-$i days"));
             $diaLabel = date('D', strtotime($fecha));
-            
+
             $monto = $db->table('dispositivos_orden')
                 ->selectSum('precio_total')
                 ->where('DATE(updated_at)', $fecha)
                 ->whereIn('estado', ['listo', 'entregado'])
                 ->get()->getRow()->precio_total ?? 0;
-                
+
             $ventasSieteDias[] = [
                 'dia' => $diaLabel,
-                'monto' => (float)$monto
+                'monto' => (float) $monto
             ];
         }
 
@@ -91,9 +112,12 @@ class DashboardController extends BaseController
                 'porReparar' => $dispositivosPorReparar,
                 'reparados' => $dispositivosReparados,
                 'recaudado' => $dineroRecaudado,
+                'totalManoObra' => $totalManoObra,
+                'totalRepuestos' => $totalRepuestos,
                 'topTecnico' => $topTecnico,
                 'tiposMasReparados' => $tiposMasReparados,
                 'comisionesMes' => $comisionesMes,
+                'repuestosMes' => $repuestosMes,
                 'ordenesRecientes' => $ordenesRecientes,
                 'ventasSieteDias' => $ventasSieteDias
             ]
