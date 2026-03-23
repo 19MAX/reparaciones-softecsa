@@ -433,7 +433,6 @@
                                 <div class="flex border-b border-primary-800 sm:hidden">
                                     <button onclick="switchTab('<?= $tabID ?>', 'issues')" id="<?= $tabID ?>-tab-issues"
                                         class="cursor-pointer tab-btn active-tab flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent transition-all">Problemas</button>
-                                    Problemas
                                     </button>
                                     <button onclick="switchTab('<?= $tabID ?>', 'log')" id="<?= $tabID ?>-tab-log"
                                         class="cursor-pointer tab-btn flex-1 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b-2 border-transparent transition-all">Historial</button>
@@ -442,7 +441,7 @@
 
                                 <div class="sm:grid sm:grid-cols-5">
                                     <div class="sm:col-span-3 p-4 sm:p-6 sm:border-r border-primary-800 tab-panel active"
-                                        id="d1-panel-issues">
+                                        id="<?= $tabID ?>-panel-issues">
                                         <div class="flex items-center gap-2 mb-4">
                                             <div
                                                 class="w-6 h-6 rounded bg-amber-500/15 border border-amber-500/25 flex items-center justify-center glow-amber">
@@ -494,7 +493,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="sm:col-span-2 p-4 sm:p-6 bg-primary/20 tab-panel" id="d1-panel-log">
+                                    <div class="sm:col-span-2 p-4 sm:p-6 bg-primary/20 tab-panel" id="<?= $tabID ?>-panel-log">
                                         <div class="flex items-center gap-2 mb-6">
                                             <div
                                                 class="w-6 h-6 rounded bg-primary-800 border border-primary-700 flex items-center justify-center">
