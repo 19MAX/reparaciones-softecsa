@@ -60,11 +60,23 @@ Pool de Dispositivos (Sin Asignar)
                                     <td>
                                         <?= estadoPill($dev['estado']) ?>
                                     </td>
-                                    <td class="text-end">
-                                        <a href="<?= base_url('tecnico/dispositivos/detalle/' . $dev['id']) ?>"
-                                            class="btn btn-sm btn-primary">
-                                            Ver Detalle / Tomar Reparación
-                                        </a>
+                                    <td>
+                                        <div class="form-button-action">
+                                            <!-- Print dropdown -->
+                                            <div class="dropdown d-inline">
+                                                <a class="btn btn-link btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Imprimir">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $dev['id'] . '/carta') ?>" target="_blank">Carta</a></li>
+                                                    <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $dev['id'] . '/ticket') ?>" target="_blank">Ticket</a></li>
+                                                    <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $dev['id']) ?>" target="_blank">Completo</a></li>
+                                                </ul>
+                                            </div>
+                                            <a href="<?= base_url('tecnico/dispositivos/detalle/' . $dev['id']) ?>" class="btn btn-link btn-primary" title="Ver Detalle / Tomar Reparación">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

@@ -84,10 +84,21 @@
                                             $<?= number_format($rep['precio_total'], 2) ?>
                                         </td>
                                         <td>
-                                            <a href="<?= base_url('tecnico/dispositivos/detalle/' . $rep['id']) ?>"
-                                                class="btn btn-sm btn-primary">
-                                                Ver Detalle
-                                            </a>
+                                            <div class="form-button-action">
+                                                <div class="dropdown d-inline">
+                                                    <a class="btn btn-link btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Imprimir">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $rep['id'] . '/carta') ?>" target="_blank">Carta</a></li>
+                                                        <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $rep['id'] . '/ticket') ?>" target="_blank">Ticket</a></li>
+                                                        <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $rep['id']) ?>" target="_blank">Completo</a></li>
+                                                    </ul>
+                                                </div>
+                                                <a href="<?= base_url('tecnico/dispositivos/detalle/' . $rep['id']) ?>" class="btn btn-link btn-primary" title="Ver Detalle">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
