@@ -90,9 +90,9 @@
                                                         <i class="fas fa-print"></i>
                                                     </a>
                                                     <ul class="dropdown-menu">
-                                                        <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $rep['id'] . '/carta') ?>" target="_blank">Carta</a></li>
-                                                        <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $rep['id'] . '/ticket') ?>" target="_blank">Ticket</a></li>
-                                                        <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $rep['id']) ?>" target="_blank">Completo</a></li>
+                                                        <li><a class="dropdown-item" href="<?= base_url('tecnico/ordenes/imprimir/' . $rep['id'] . '/carta') ?>" target="_blank">Carta</a></li>
+                                                        <li><a class="dropdown-item" href="<?= base_url('tecnico/ordenes/imprimir/' . $rep['id'] . '/ticket') ?>" target="_blank">Ticket</a></li>
+                                                        <li><a class="dropdown-item" href="<?= base_url('tecnico/ordenes/imprimir/' . $rep['id']) ?>" target="_blank">Completo</a></li>
                                                     </ul>
                                                 </div>
                                                 <a href="<?= base_url('tecnico/dispositivos/detalle/' . $rep['id']) ?>" class="btn btn-link btn-primary" title="Ver Detalle">

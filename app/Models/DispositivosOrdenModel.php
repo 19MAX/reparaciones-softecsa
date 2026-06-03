@@ -63,6 +63,7 @@ class DispositivosOrdenModel extends Model
                 'COALESCE(mo.nombre, do.modelo_texto) AS modelo',
                 // Orden y cliente
                 'o.numero_orden',
+                'o.id AS orden_id',
                 'c.nombres AS cliente_nombre',
                 'c.apellidos AS cliente_apellido',
             ])

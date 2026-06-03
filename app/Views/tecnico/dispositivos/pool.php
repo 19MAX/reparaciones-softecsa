@@ -68,9 +68,9 @@ Pool de Dispositivos (Sin Asignar)
                                                     <i class="fas fa-print"></i>
                                                 </a>
                                                 <ul class="dropdown-menu">
-                                                    <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $dev['id'] . '/carta') ?>" target="_blank">Carta</a></li>
-                                                    <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $dev['id'] . '/ticket') ?>" target="_blank">Ticket</a></li>
-                                                    <li><a class="dropdown-item" href="<?= base_url('admin/ordenes/imprimir/' . $dev['id']) ?>" target="_blank">Completo</a></li>
+                                                    <li><a class="dropdown-item" href="<?= base_url('tecnico/ordenes/imprimir/' . $dev['id'] . '/carta') ?>" target="_blank">Carta</a></li>
+                                                    <li><a class="dropdown-item" href="<?= base_url('tecnico/ordenes/imprimir/' . $dev['id'] . '/ticket') ?>" target="_blank">Ticket</a></li>
+                                                    <li><a class="dropdown-item" href="<?= base_url('tecnico/ordenes/imprimir/' . $dev['id']) ?>" target="_blank">Completo</a></li>
                                                 </ul>
                                             </div>
                                             <a href="<?= base_url('tecnico/dispositivos/detalle/' . $dev['id']) ?>" class="btn btn-link btn-primary" title="Ver Detalle / Tomar Reparación">

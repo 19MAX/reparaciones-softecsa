@@ -191,6 +191,7 @@ class ReparacionEmailService
                 'o.observaciones_generales',
                 'o.created_at AS fecha_ingreso',
                 'c.nombres AS cliente_nombre',
+                'c.apellidos AS cliente_apellido',
                 'c.telefono AS cliente_telefono',
                 'c.email AS cliente_email',
                 'c.cedula AS cliente_cedula',
@@ -356,6 +357,7 @@ class ReparacionEmailService
                 'o.numero_orden                      AS codigo_orden',
                 'o.id                                AS orden_id',
                 'c.nombres                           AS cliente_nombre',
+                'c.apellidos                         AS cliente_apellido',
                 'c.email                             AS cliente_email',
             ])
             ->join('ordenes o', 'o.id  = do.orden_id')
