@@ -419,11 +419,15 @@
         <div class="bloque-tit">Información</div>
         <div class="t-info-row">
             <div class="t-info-lbl">Cliente</div>
-            <div class="t-info-val"><?= esc($orden['cliente_nombre']) ?></div>
+            <div class="t-info-val"><?= esc(trim($orden['cliente_nombre'] . ' ' . $orden['cliente_apellido'])) ?></div>
         </div>
         <div class="t-info-row">
             <div class="t-info-lbl">Ingreso</div>
             <div class="t-info-val"><?= date('d/m/Y H:i', strtotime($orden['fecha_ingreso'])) ?></div>
+        </div>
+        <div class="t-info-row">
+            <div class="t-info-lbl">Tel</div>
+            <div class="t-info-val"><?= esc($orden['cliente_telefono'] ?: '—') ?></div>
         </div>
     </div>
 
@@ -455,6 +459,9 @@
                     <?php if ($dev['costo_prioridad'] > 0): ?>
                         <small style="color:#c62828;">(Prioridad: <?= esc($dev['prioridad']) ?>)</small>
                     <?php endif; ?>
+                    <?php if (!empty($dev['accesorios'])): ?>
+                        <small style="color:#555;">Acc: <?php foreach ($dev['accesorios'] as $acc): ?><?= esc($acc['accesorio']) ?><?= ($acc['cantidad'] > 1) ? ' ×' . $acc['cantidad'] : '' ?>; <?php endforeach; ?></small>
+                    <?php endif; ?>
                 </div>
                 <div class="tic-price <?= $dev_sin_precio ? 'pending' : '' ?>">
                     <?= $dev_sin_precio ? 'Por diag.' : '$' . number_format((float) $dev['precio_total'], 2) ?>
@@ -482,6 +489,9 @@
                     <div class="t-item-estado" style="color:#c62828;">
                         Prioridad: <strong><?= esc($dev['prioridad']) ?></strong>
                     </div>
+                <?php endif; ?>
+                <?php if (!empty($dev['accesorios'])): ?>
+                    <div style="font-size:8px;margin-top:2px;color:#555;">Acc: <?php foreach ($dev['accesorios'] as $acc): ?><?= esc($acc['accesorio']) ?><?= ($acc['cantidad'] > 1) ? ' ×' . $acc['cantidad'] : '' ?>; <?php endforeach; ?></div>
                 <?php endif; ?>
                 <div class="t-item-price <?= $dev_sin_precio ? 'pending' : '' ?>">
                     <?= $dev_sin_precio ? '⚠ Por diagnosticar' : '$' . number_format((float) $dev['precio_total'], 2) ?>

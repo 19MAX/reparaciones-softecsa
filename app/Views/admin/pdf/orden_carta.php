@@ -464,7 +464,7 @@
         <div class="bloque-tit">Datos del Cliente</div>
         <div class="fila">
             <div class="f-lbl">Nombre</div>
-            <div class="f-val"><?= esc($orden['cliente_nombre']) ?></div>
+            <div class="f-val"><?= esc(trim($orden['cliente_nombre'] . ' ' . $orden['cliente_apellido'])) ?></div>
         </div>
         <div class="fila">
             <div class="f-lbl">Teléfono</div>
@@ -606,7 +606,7 @@
         <?php endif; ?>
 
         <div class="auth-texto">
-            Yo, <strong><?= esc($orden['cliente_nombre']) ?></strong><?php if (!empty($orden['cliente_cedula'])): ?>,
+            Yo, <strong><?= esc(trim($orden['cliente_nombre'] . ' ' . $orden['cliente_apellido'])) ?></strong><?php if (!empty($orden['cliente_cedula'])): ?>,
                 portador del documento de identidad N° <strong><?= esc($orden['cliente_cedula']) ?></strong><?php endif; ?>,
             declaro haber entregado el/los equipo(s) detallado(s) en esta orden en las condiciones físicas descritas,
             y autorizo a <strong><?= esc($empresa_config['nombre_empresa']) ?></strong> a realizar la revisión y
@@ -625,7 +625,7 @@
 
         <div class="firma-unica">
             <div class="f-line"></div>
-            <div class="f-nom"><?= esc($orden['cliente_nombre']) ?></div>
+            <div class="f-nom"><?= esc(trim($orden['cliente_nombre'] . ' ' . $orden['cliente_apellido'])) ?></div>
             <?php if (!empty($orden['cliente_cedula'])): ?>
                 <div class="f-doc">C.I. <?= esc($orden['cliente_cedula']) ?></div>
             <?php endif; ?>

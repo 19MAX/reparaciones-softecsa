@@ -112,6 +112,7 @@ class DispositivosOrdenModel extends Model
                 // Cliente
                 'c.id                       AS cliente_id',
                 'c.nombres                   AS cliente_nombre',
+                'c.apellidos                 AS cliente_apellido',
                 'c.telefono                 AS cliente_telefono',
                 'c.email                    AS cliente_email',
                 // Técnico asignado

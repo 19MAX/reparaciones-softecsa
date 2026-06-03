@@ -81,7 +81,7 @@ if ($tienePass) {
                         <span class="text-muted small fw-semibold">Cliente</span>
                         <button class="btn btn-link btn-sm p-0 text-decoration-none" data-bs-toggle="modal"
                             data-bs-target="#modalCliente">
-                            <?= esc($dispositivo['cliente_nombre']) ?>
+                            <?= esc(trim($dispositivo['cliente_nombre'] . ' ' . $dispositivo['cliente_apellido'])) ?>
                             <i class="fas fa-chevron-right ms-1 small"></i>
                         </button>
                     </li>
@@ -540,7 +540,7 @@ if ($tienePass) {
                         <i class="fas fa-user text-primary"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title fw-bold mb-0 fs-6"><?= esc($dispositivo['cliente_nombre']) ?></h5>
+                        <h5 class="modal-title fw-bold mb-0 fs-6"><?= esc(trim($dispositivo['cliente_nombre'] . ' ' . $dispositivo['cliente_apellido'])) ?></h5>
                         <small class="text-muted">Datos del cliente</small>
                     </div>
                 </div>

@@ -498,6 +498,7 @@ class OrdenController extends BaseController
                 'o.observaciones_generales',
                 'o.created_at AS fecha_ingreso',
                 'c.nombres    AS cliente_nombre',
+                'c.apellidos  AS cliente_apellido',
                 'c.telefono   AS cliente_telefono',
                 'c.email      AS cliente_email',
                 'c.cedula AS cliente_cedula',
