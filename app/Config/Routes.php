@@ -17,7 +17,7 @@ $routes->group('auth', function (RouteCollection $routes) {
 $routes->get('consulta/orden/(:segment)', 'ConsultaController::verOrden/$1');
 $routes->get('consulta/mis-ordenes', 'ConsultaController::buscarPorCedula');
 
-$routes->group('admin', ['filter' => 'auth'], function (RouteCollection $routes) {
+$routes->group('admin', ['filter' => 'auth:admin'], function (RouteCollection $routes) {
     $routes->get('dashboard', 'Admin\DashboardController::index');
 
     $routes->group('usuarios', function (RouteCollection $routes) {
@@ -149,7 +149,7 @@ $routes->group('admin', ['filter' => 'auth'], function (RouteCollection $routes)
 
 });
 
-$routes->group('recepcionista', function ($routes) {
+$routes->group('recepcionista', ['filter' => 'auth:recepcionista'], function ($routes) {
 
     // Dashboard
     $routes->get('dashboard', 'Recepcionista\DashboardController::index');
