@@ -154,7 +154,7 @@
                                     <select class="form-select" id="add-role" name="role" required>
                                         <option selected disabled>Seleccionar el rol</option>
                                         <option value="admin">Admin</option>
-                                        <option value="recepcionista">Recepcionista</option>
+                                        <option value="recepcion">Recepcionista</option>
                                         <option value="tecnico">Técnico</option>
                                     </select>
                                     <label for="add-role">Selecciona el rol</label>
@@ -252,7 +252,7 @@
                                 <div class="form-floating form-floating-custom mb-3">
                                     <select class="form-select" id="edit-role" name="role" required="">
                                         <option value="admin">Admin</option>
-                                        <option value="recepcionista">Recepcionista</option>
+                                        <option value="recepcion">Recepcionista</option>
                                         <option value="tecnico">Técnico</option>
                                     </select>
                                     <label for="edit-role">Selecciona el rol</label>
