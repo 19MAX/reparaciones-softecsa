@@ -2,9 +2,9 @@
 # Operating Specific Junk Files
 #-------------------------
 
-#IA
-
-GEMINI.md
+# Configuracion de Agentes AI (opencode, gentle-ai)
+.atl/
+openspec/
 public/uploads/empresa/
 
 # OS X
