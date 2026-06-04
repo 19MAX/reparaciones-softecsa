@@ -170,7 +170,11 @@ $routes->group('recepcionista', ['filter' => 'auth:recepcion'], function ($route
     });
 
     // Dispositivos
+    $routes->get('dispositivos', 'Recepcionista\DispositivoController::index');
+    $routes->get('dispositivos/imprimir/(:num)', 'Recepcionista\DispositivoController::imprimir/$1');
+    $routes->get('dispositivos/imprimir/(:num)/(:any)', 'Recepcionista\DispositivoController::imprimir/$1/$2');
     $routes->get('dispositivos/detalle/(:num)', 'Recepcionista\DispositivoController::detalle/$1');
+    $routes->get('dispositivos/entregar', 'Recepcionista\DispositivoController::entregarIndex');
     $routes->post('dispositivos/entregar', 'Recepcionista\DispositivoController::entregar');
 });
 
@@ -245,8 +249,12 @@ $routes->group('global', ['filter' => 'auth'], function ($routes) {
 
     $routes->get('dispositivos/(:num)', 'GlobalController::obtenerDispositivos/$1');
 
-    //Búsqueda - creación - actualización para el cliente
+    // Búsqueda - creación - actualización para el cliente
     $routes->post('buscar-cliente', 'GlobalController::buscarCliente');
     $routes->post('crear-cliente', 'GlobalController::crearCliente');
     $routes->post('actualizar-cliente', 'GlobalController::actualizarCliente');
+
+    // Búsqueda para repuestos
+
+    $routes->get('buscar-repuestos', 'GlobalController::buscarRepuestos'); // Para fetch/autocomplete
 });

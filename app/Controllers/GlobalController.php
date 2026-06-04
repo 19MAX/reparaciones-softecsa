@@ -18,6 +18,9 @@ class GlobalController extends BaseController
     protected $accesorioModel;
     protected $detallesModel;
     protected $dispositivoModel;
+    protected $clienteModel;
+    protected $repuestoModel;
+    protected $apiPrivadaService;
     protected $db;
 
     public function __construct()
@@ -28,6 +31,9 @@ class GlobalController extends BaseController
         $this->accesorioModel = new AccesoriosCatalogoModel();
         $this->detallesModel = new DetallesCatalogoModel();
         $this->dispositivoModel = new DispositivoModel();
+        $this->clienteModel = new \App\Models\ClienteModel();
+        $this->repuestoModel = new \App\Models\RepuestoModel();
+        $this->apiPrivadaService = new \App\Services\ApiPrivadaService();
 
         $this->db = \Config\Database::connect();
     }
@@ -140,6 +146,7 @@ class GlobalController extends BaseController
 
         return $this->response->setJSON($opciones);
     }
+
     /**
      * Crear problema común inline
      */
@@ -199,8 +206,6 @@ class GlobalController extends BaseController
         ]);
     }
 
-
-
     /**
      * Buscar accesorios
      */
@@ -219,7 +224,6 @@ class GlobalController extends BaseController
             $accesorios
         ));
     }
-
 
     /**
      * Crear accesorio
@@ -258,7 +262,6 @@ class GlobalController extends BaseController
         ]);
     }
 
-
     /**
      * Buscar detallles items
      */
@@ -277,7 +280,6 @@ class GlobalController extends BaseController
             'text' => $i['nombre'],
         ], $items));
     }
-
 
     /**
      * Crear detallles item
@@ -404,5 +406,277 @@ class GlobalController extends BaseController
                 'message' => 'Error al obtener dispositivos: ' . $e->getMessage()
             ]);
         }
+    }
+
+    // Método para buscar cliente por cédula
+    public function buscarCliente()
+    {
+        try {
+            $newCsrfToken = csrf_hash();
+            $data = $this->request->getJSON();
+
+            if (is_null($data) || !isset($data->cedula)) {
+                return $this->response->setHeader('X-CSRF-TOKEN', $newCsrfToken)
+                    ->setJSON(['status' => 'validation', 'message' => 'Cédula requerida', 'code' => 400], 400);
+            }
+
+            $cedula = trim($data->cedula);
+
+            // 1. Consultar BD Local
+            $clienteLocal = $this->clienteModel->where('cedula', $cedula)->first();
+
+            if ($clienteLocal) {
+                return $this->response->setHeader('X-CSRF-TOKEN', $newCsrfToken)
+                    ->setJSON([
+                        'status' => 'success',
+                        'message' => 'Cliente local encontrado',
+                        'code' => 200,
+                        'origin' => 'local', // Flag para saber de donde viene
+                        'persona' => [
+                            'id' => $clienteLocal['id'],
+                            'cedula' => $clienteLocal['cedula'],
+                            'nombres' => $clienteLocal['nombres'],
+                            'apellidos' => $clienteLocal['apellidos'],
+                            'telefono' => $clienteLocal['telefono'],
+                            'telefono_secundario' => $clienteLocal['telefono_secundario'] ?? '', // Nuevo campo
+                            'email' => $clienteLocal['email'],
+                            // 'direccion' => $clienteLocal['direccion'],
+                        ]
+                    ]);
+            }
+
+            // 2. Consultar API Externa
+            $persona = $this->apiPrivadaService->getDataUser($cedula);
+
+            if ($persona && $persona['success'] && isset($persona['data'])) {
+                $d = $persona['data'];
+                // 🔹 Crear cliente en BD local
+                $nuevoCliente = [
+                    'cedula' => $d['identification'],
+                    'nombres' => $d['name'],
+                    'apellidos' => $d['surname'],
+                    'email' => $d['email'] ?? '',
+                    'telefono' => $d['phone'] ?? '',
+                    'telefono_secundario' => null,
+                    'created_at' => date('Y-m-d H:i:s')
+                ];
+
+                $idCliente = $this->clienteModel->insert($nuevoCliente);
+                return $this->response->setHeader('X-CSRF-TOKEN', $newCsrfToken)
+                    ->setJSON([
+                        'status' => 'success',
+                        'message' => 'Datos obtenidos de Registro Civil',
+                        'code' => 200,
+                        'origin' => 'api',
+                        'persona' => [
+                            'id' => $idCliente, // ID vacío porque es nuevo en tu sistema
+                            'cedula' => $d['identification'], // Asegurar devolver la cédula
+                            'nombres' => $d['name'],
+                            'apellidos' => $d['surname'],
+                            'email' => $d['email'] ?? '',
+                            'telefono' => $d['phone'] ?? '',
+                            'telefono_secundario' => '', // API usualmente no trae esto
+                            'direccion' => $d['address'] ?? ''
+                        ]
+                    ]);
+            }
+
+            // 3. No encontrado
+            return $this->response->setHeader('X-CSRF-TOKEN', $newCsrfToken)
+                ->setJSON([
+                    'status' => 'error',
+                    'message' => 'No encontrado. Registre manualmente.',
+                    'code' => 404
+                ], 404);
+
+        } catch (\Exception $e) {
+            return $this->response->setJSON(['success' => false, 'message' => $e->getMessage()])->setStatusCode(500);
+        }
+    }
+
+    //Método para crear cliente desde modal js
+    public function crearCliente()
+    {
+        // Verificar que sea una petición AJAX/JSON
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(403)->setBody('Acceso denegado');
+        }
+
+        try {
+            // 1. Obtener el JSON enviado por el fetch
+            $json = $this->request->getJSON(true); // true para recibirlo como array asociativo
+
+            // 2. Definir reglas de validación (basadas en tu tabla 'clientes')
+            $rules = [
+                'cedula' => [
+                    'label' => 'Cédula',
+                    'rules' => 'required|is_unique[clientes.cedula]|max_length[20]',
+                ],
+                'nombres' => [
+                    'label' => 'Nombres',
+                    'rules' => 'required|max_length[100]',
+                ],
+                'apellidos' => [
+                    'label' => 'Apellidos',
+                    'rules' => 'required|max_length[100]',
+                ],
+                'email' => [
+                    'label' => 'Email',
+                    'rules' => 'permit_empty|valid_email|max_length[150]',
+                ],
+                'telefono' => [
+                    'label' => 'Teléfono',
+                    'rules' => 'permit_empty|max_length[20]',
+                ],
+                'telefono_secundario' => [
+                    'label' => 'Teléfono Secundario',
+                    'rules' => 'permit_empty|max_length[20]',
+                ],
+            ];
+
+            // 3. Validar los datos del JSON
+            $validation = \Config\Services::validation();
+
+            // Usamos setRules y run pasándole el array $json directamente
+            $validation->setRules($rules);
+
+            if (!$validation->run($json)) {
+                // Retornar error con el nuevo token CSRF
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'token' => csrf_hash(), // Regenerar token para que el formulario no expire
+                    'errors' => $validation->getErrors()
+                ]);
+            }
+
+            // 4. Preparar datos para insertar
+            $clienteData = [
+                'cedula' => $json['cedula'],
+                'nombres' => $json['nombres'],
+                'apellidos' => $json['apellidos'],
+                'telefono' => $json['telefono'] ?? null,
+                'telefono_secundario' => $json['telefono_secundario'] ?? null,
+                'email' => $json['email'] ?? null,
+                'created_at' => date('Y-m-d H:i:s'), // O dejar que el modelo lo maneje
+            ];
+
+            // 5. Insertar usando el Modelo (asegúrate de tener cargado $this->clienteModel)
+            // Asumo que tu modelo se llama ClienteModel
+            $insertID = $this->clienteModel->insert($clienteData);
+
+            if ($insertID) {
+                // Obtener los datos recién creados para devolverlos al JS (útil para actualizar la vista)
+                $nuevoCliente = $this->clienteModel->find($insertID);
+
+                return $this->response->setJSON([
+                    'status' => 'success',
+                    'token' => csrf_hash(), // Token nuevo
+                    'msg' => 'Cliente registrado exitosamente',
+                    'client_data' => $nuevoCliente // Datos para tu variable this.client en JS
+                ]);
+            } else {
+                throw new \Exception("No se pudo insertar el registro en la base de datos.");
+            }
+
+        } catch (\Exception $e) {
+            log_message('error', '[ClientesController::crearJs] ' . $e->getMessage());
+
+            return $this->response->setJSON([
+                'status' => 'error',
+                'token' => csrf_hash(),
+                'errors' => ['exception' => 'Error del sistema: ' . $e->getMessage()]
+            ]);
+        }
+    }
+
+    // Método para actualizar cliente desde modal js
+    public function actualizarCliente()
+    {
+        if (!$this->request->getJSON()) {
+            return $this->response->setStatusCode(403)->setBody('Acceso denegado');
+        }
+
+        try {
+            $json = $this->request->getJSON(true);
+
+            // Validar que venga el ID
+            if (empty($json['id'])) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'token' => csrf_hash(),
+                    'errors' => 'ID de cliente no identificado.'
+                ]);
+            }
+
+            $id = $json['id'];
+
+            // Reglas de validación para EDICIÓN
+            $rules = [
+                'cedula' => [
+                    'label' => 'Cédula',
+                    'rules' => "required|max_length[20]|is_unique[clientes.cedula,id,{$id}]",
+                    'errors' => [
+                        'is_unique' => 'Esta cédula ya pertenece a otro cliente.'
+                    ]
+                ],
+                'nombres' => 'required|max_length[100]',
+                'apellidos' => 'required|max_length[100]',
+                'email' => 'permit_empty|valid_email|max_length[150]',
+                'telefono' => 'permit_empty|max_length[20]',
+                'telefono_secundario' => 'permit_empty|max_length[20]',
+            ];
+
+            $validation = \Config\Services::validation();
+            $validation->setRules($rules);
+
+            if (!$validation->run($json)) {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'token' => csrf_hash(),
+                    'errors' => $validation->getErrors()
+                ]);
+            }
+
+            // Preparar datos para actualizar
+            $clienteData = [
+                'cedula' => $json['cedula'],
+                'nombres' => $json['nombres'],
+                'apellidos' => $json['apellidos'],
+                'telefono' => $json['telefono'] ?? null,
+                'telefono_secundario' => $json['telefono_secundario'] ?? null,
+                'email' => $json['email'] ?? null,
+                'updated_at' => date('Y-m-d H:i:s'), // O dejar que el modelo lo maneje
+            ];
+
+            // Actualizar usando el Modelo
+            $this->clienteModel->update($id, $clienteData);
+
+            // Devolver los datos actualizados para refrescar la vista JS
+            $clienteActualizado = $this->clienteModel->find($id);
+
+            return $this->response->setJSON([
+                'status' => 'success',
+                'token' => csrf_hash(),
+                'msg' => 'Datos actualizados correctamente',
+                'client_data' => $clienteActualizado
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', '[ClientesController::actualizarJs] ' . $e->getMessage());
+            return $this->response->setJSON([
+                'status' => 'error',
+                'token' => csrf_hash(),
+                'errors' => 'Error del sistema: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    // Buscar repuestos para autocomplete
+    public function buscarRepuestos()
+    {
+        $term = $this->request->getGet('term');
+        $repuestos = $this->repuestoModel->like('nombre', $term)->limit(10)->findAll();
+
+        return $this->response->setJSON($repuestos);
     }
 }
