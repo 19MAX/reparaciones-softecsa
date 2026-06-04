@@ -143,7 +143,7 @@
                         </a>
                     </li>
 
-                <?php elseif ($userRole === 'recepcionista'): ?>
+                <?php elseif ($userRole === 'recepcion'): ?>
                     <!-- SIDEBAR RECEPCIONISTA -->
                     <li class="nav-item <?= strpos(current_url(), 'recepcionista/dashboard') !== false ? 'active' : '' ?>">
                         <a href="<?= base_url('recepcionista/dashboard') ?>">
@@ -166,6 +166,14 @@
                         <h4 class="text-section">Manejo</h4>
                     </li>
 
+                    <li
+                        class="nav-item <?= (current_url() == site_url('recepcionista/dispositivos/entregar')) ? 'active' : '' ?>">
+                        <a href="<?= base_url('recepcionista/dispositivos/entregar') ?>">
+                            <i class="fas fa-box-open"></i>
+                            <p>Entregar</p>
+                        </a>
+                    </li>
+
                     <li class="nav-item <?= strpos(current_url(), 'recepcionista/ordenes') !== false ? 'active' : '' ?>">
                         <a href="<?= base_url('recepcionista/ordenes') ?>">
                             <i class="fas fa-toolbox"></i>
@@ -174,7 +182,7 @@
                     </li>
 
                     <li
-                        class="nav-item <?= strpos(current_url(), 'recepcionista/dispositivos') !== false ? 'active' : '' ?>">
+                        class="nav-item <?= (current_url() == site_url('recepcionista/dispositivos')) ? 'active' : '' ?>">
                         <a href="<?= base_url('recepcionista/dispositivos') ?>">
                             <i class="fas fa-laptop"></i>
                             <p>Dispositivos</p>

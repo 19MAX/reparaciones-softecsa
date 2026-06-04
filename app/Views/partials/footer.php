@@ -1,6 +1,6 @@
 <footer class="footer">
     <div class="container-fluid">
-        <nav class="pull-left">
+        <!-- <nav class="pull-left">
             <ul class="nav">
                 <li class="nav-item">
                     <a class="nav-link" href="http://www.themekita.com">
@@ -18,10 +18,12 @@
                     </a>
                 </li>
             </ul>
-        </nav>
+        </nav> -->
         <div class="copyright ms-auto">
-            2024, made with <i class="fa fa-heart heart text-danger"></i> by <a
-                href="http://www.themekita.com">ThemeKita</a>
+            <span id="anio"></span> Creado con <i class="fa fa-heart heart text-danger"></i> por <a href="https://github.com/19MAX">Max</a>
         </div>
+        <script>
+            document.getElementById("anio").textContent = new Date().getFullYear();
+        </script>
     </div>
 </footer>
