@@ -158,14 +158,20 @@ $routes->group('recepcionista', ['filter' => 'auth:recepcion'], function ($route
     $routes->get('ordenes', 'Recepcionista\OrdenController::index');
     $routes->get('ordenes/crear', 'Recepcionista\OrdenController::crear');
     $routes->post('ordenes/guardar', 'Recepcionista\OrdenController::guardar');
-    $routes->get('ordenes/ver/(:num)', 'Recepcionista\OrdenController::ver/$1');
+    $routes->get('ordenes/dispositivo/(:num)', 'Recepcionista\OrdenController::getDispositivoOrden/$1');
     $routes->get('ordenes/imprimir/(:num)', 'Recepcionista\OrdenController::imprimir/$1');
     $routes->get('ordenes/imprimir/(:num)/(:any)', 'Recepcionista\OrdenController::imprimir/$1/$2');
+
     $routes->post('ordenes/entregar/(:num)', 'Recepcionista\OrdenController::entregar/$1');
 
+    $routes->group('clientes', function ($routes) {
+        $routes->get('', 'Recepcionista\ClientesController::index');
+        $routes->get('ver/(:num)', 'Recepcionista\ClientesController::ver/$1');
+    });
+
     // Dispositivos
-    $routes->get('dispositivos/ver/(:num)', 'Recepcionista\DispositivoController::ver/$1');
-    $routes->post('dispositivos/entregar/(:num)', 'Recepcionista\DispositivoController::entregar/$1');
+    $routes->get('dispositivos/detalle/(:num)', 'Recepcionista\DispositivoController::detalle/$1');
+    $routes->post('dispositivos/entregar', 'Recepcionista\DispositivoController::entregar');
 });
 
 
@@ -238,4 +244,9 @@ $routes->group('global', ['filter' => 'auth'], function ($routes) {
     $routes->post('registrar-uso-problema', 'GlobalController::registrarUsoProblema');
 
     $routes->get('dispositivos/(:num)', 'GlobalController::obtenerDispositivos/$1');
+
+    //Búsqueda - creación - actualización para el cliente
+    $routes->post('buscar-cliente', 'GlobalController::buscarCliente');
+    $routes->post('crear-cliente', 'GlobalController::crearCliente');
+    $routes->post('actualizar-cliente', 'GlobalController::actualizarCliente');
 });
