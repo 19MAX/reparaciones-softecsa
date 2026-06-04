@@ -126,7 +126,8 @@ class OrdenController extends BaseController
                         $key = hex2bin(substr(hash('sha256', env('encryption.key')), 0, 64));
                         $iv = openssl_random_pseudo_bytes(16);
                         $cifrado = openssl_encrypt($rawPass, 'AES-256-CBC', $key, 0, $iv);
-                        $passCode = base64_encode($iv . '::' . $cifrado);
+                        $passCode = base64_encode(base64_encode($iv) . '::' . $cifrado);
+
                     }
                 }
 
@@ -536,7 +537,7 @@ class OrdenController extends BaseController
         $options = new Options();
         $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
-        $options->set('chroot', FCPATH);
+        $options->set('chroot', [FCPATH]);
 
         $dompdf = new Dompdf($options);
 

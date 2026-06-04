@@ -3,19 +3,23 @@
 namespace App\Controllers\Recepcionista;
 
 use App\Controllers\BaseController;
-use App\Models\ChecklistDisposorioModel;
-use App\Models\ClienteModel;
 use App\Models\ConfiguracionModel;
+use App\Models\DispositivoAccesorios;
+use App\Models\DispositivoDetalles;
 use App\Models\DispositivoModel;
+use App\Models\DispositivoProblemaModel;
+use App\Models\DispositivosOrdenModel;
+use App\Models\HistorialEstados;
 use App\Models\OrdenesModel;
-use App\Models\UrgenciaModel;
-use CodeIgniter\HTTP\ResponseInterface;
+use App\Models\PrioridadModel;
+use App\Models\ProblemaModel;
+use App\Models\TipoDispositivoModel;
+use App\Models\UsuarioModel;
 // --- IMPORTS PARA QR CODE Y PDF ---
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
-use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
 
 class OrdenController extends BaseController
@@ -24,62 +28,53 @@ class OrdenController extends BaseController
     protected $urgenciaModel;
     protected $usuarioModel;
     protected $tipoDispositivoModel;
-    protected $ordenesModel;
+    protected $ordenModel;
     protected $dispositivoModel;
+    protected $prioridadModel;
+    protected $dispositivoProblemaModel;
+    protected $dispositivosAccesoriosModel;
+    protected $dispositivoDetallesModel;
+    protected $historialEstadosModel;
+    protected $problemaModel;
 
     public function __construct()
     {
-        $this->configuracionModel = new ConfiguracionModel();
-        $this->urgenciaModel = new \App\Models\UrgenciaModel();
-        $this->usuarioModel = new \App\Models\UsuarioModel();
-        $this->tipoDispositivoModel = new \App\Models\TipoDispositivoModel();
-        $this->ordenesModel = new OrdenesModel();
-        $this->dispositivoModel = new \App\Models\DispositivoModel();
+        $this->ordenModel = new OrdenesModel();
+        $this->dispositivoModel = new DispositivosOrdenModel();
+        $this->prioridadModel = new PrioridadModel();
+        $this->usuarioModel = new UsuarioModel();
+        $this->tipoDispositivoModel = new TipoDispositivoModel();
+        $this->dispositivoProblemaModel = new DispositivoProblemaModel();
+        $this->dispositivosAccesoriosModel = new DispositivoAccesorios();
+        $this->dispositivoDetallesModel = new DispositivoDetalles();
+        $this->historialEstadosModel = new HistorialEstados();
+        $this->problemaModel = new ProblemaModel();
     }
 
     public function index()
     {
         $db = \Config\Database::connect();
 
-        // Construimos la consulta
-        $builder = $db->table('ordenes as o');
-        $builder->select('
-            o.*,
-            c.nombres,
-            c.apellidos,
-            u.nombre as nombre_prioridad,
-            (SELECT GROUP_CONCAT(CONCAT(marca, " ", modelo) SEPARATOR ", ")
-             FROM dispositivos_orden d WHERE d.orden_id = o.id) as equipos_resumen
-        ');
-
-        $builder->join('clientes as c', 'c.id = o.cliente_id');
-        $builder->join('prioridades as u', 'u.id = o.prioridad_id', 'left');
-
-        // Apply filters
-        $fecha_desde = $this->request->getGet('fecha_desde');
-        $fecha_hasta = $this->request->getGet('fecha_hasta');
-        $estado = $this->request->getGet('estado');
-
-        if (!empty($fecha_desde)) {
-            $builder->where('o.created_at >=', $fecha_desde . ' 00:00:00');
-        }
-        if (!empty($fecha_hasta)) {
-            $builder->where('o.created_at <=', $fecha_hasta . ' 23:59:59');
-        }
-        if (!empty($estado)) {
-            $builder->where('o.estado', $estado);
-        }
-
-        $builder->orderBy('o.id', 'DESC');
-
-        $ordenes = $builder->get()->getResultArray();
+        $ordenes = $db->table('ordenes o')
+            ->select([
+                'o.id',
+                'o.numero_orden',
+                'o.estado',
+                'o.created_at',
+                'c.nombres',
+                'c.apellidos',
+                'COUNT(do.id)    AS total_dispositivos',
+            ])
+            ->join('clientes c', 'c.id = o.cliente_id')
+            ->join('dispositivos_orden do', 'do.orden_id = o.id', 'left')
+            ->groupBy('o.id')
+            ->orderBy('o.created_at', 'DESC')
+            ->get()
+            ->getResultArray();
 
         $data = [
             'titulo' => 'Gestión de Órdenes',
             'ordenes' => $ordenes,
-            'fecha_desde' => $fecha_desde,
-            'fecha_hasta' => $fecha_hasta,
-            'estado' => $estado
         ];
 
         return view('recepcionista/ordenes/index', $data);
@@ -89,8 +84,8 @@ class OrdenController extends BaseController
     {
         $data = [
             'titulo' => 'Nueva Orden de Trabajo',
-            'urgencias' => $this->urgenciaModel->where('activo', 1)->findAll(),
-            'tecnicos' => $this->usuarioModel->where('role', 'tecnico')->where('estado', 'activo')->findAll(),
+            'prioridades' => $this->prioridadModel->where('activo', 1)->findAll(),
+            'tecnicos' => $this->usuarioModel->where('rol', 'tecnico')->where('activo', 1)->findAll(),
             'tiposDispositivos' => $this->tipoDispositivoModel->where('activo', 1)->findAll(),
         ];
 
@@ -99,247 +94,478 @@ class OrdenController extends BaseController
 
     public function guardar()
     {
-        // 1. Verificar Sesión
-        $usuarioId = session()->get('id_usuario');
+        $clienteId = $this->request->getPost('cliente_id');
+        $devices = $this->request->getPost('devices');
 
-        if (empty($usuarioId)) {
-            return redirect()->to(base_url('login'))->with('mensaje', 'Tu sesión ha expirado.');
+        if (!$clienteId || !is_array($devices) || empty($devices)) {
+            return redirect()->back()->withInput()->with('error', 'Debe seleccionar un cliente y al menos un dispositivo.');
         }
 
         try {
-            // 2. Obtener datos del formulario
-            $clienteId = $this->request->getPost('cliente_id');
-            $tecnicoId = $this->request->getPost('tecnico_id');
-            $urgenciaId = $this->request->getPost('urgencia_id');
-            $devices = $this->request->getPost('devices');
-            $valor_mano_obra_Aproximado = $this->request->getPost('valor_mano_obra_aproximado') ?? 0.00;
-            $valor_repuesto_Aproximado = $this->request->getPost('valor_repuesto_aproximado') ?? 0.00;
-
-            // 2.1 Obtener el valor de la revisión desde configuración_empresa
-            $configuracionModel = new ConfiguracionModel();
-            $configuracion = $configuracionModel->first();
-            $valorRevision = $configuracion['valor_revision'] ?? 0.00;
-
-            // Preparar datos para repopular el formulario en caso de error
-            $data = [
-                'cliente_id' => $clienteId,
-                'tecnico_id' => $tecnicoId,
-                'urgencia_id' => $urgenciaId,
-                'devices' => $devices
-            ];
-
-            // 3. Validación
-            $validation = \Config\Services::validation();
-
-            $rules = [
-                'cliente_id' => [
-                    'label' => 'Cliente',
-                    'rules' => 'required|is_not_unique[clientes.id]',
-                ],
-                'tecnico_id' => [
-                    'label' => 'Técnico',
-                    'rules' => 'permit_empty|is_not_unique[usuarios.id]',
-                ],
-                'urgencia_id' => [
-                    'label' => 'Prioridad/Urgencia',
-                    'rules' => 'permit_empty|is_not_unique[urgencias.id]',
-                ],
-                'devices' => [
-                    'label' => 'Dispositivos',
-                    'rules' => 'required',
-                ],
-                'devices.*.tecnico_id' => [
-                    'label' => 'Técnico del dispositivo',
-                    'rules' => 'permit_empty|is_not_unique[usuarios.id]',
-                ]
-            ];
-
-            $validation->setRules($rules);
-
-            if (!$validation->run($data)) {
-                return redirectView('recepcionista/ordenes/crear', $validation, [['Corrija los errores del formulario', 'error', 'top-end']], $data);
-            }
-
-            // Validación manual extra: Verificar que devices sea un array válido
-            if (empty($devices) || !is_array($devices)) {
-                return redirectView('recepcionista/ordenes/crear', null, [['Debe agregar al menos un dispositivo', 'error', 'top-end']], $data);
-            }
-
-            // ---------------------------------------------------
-            // 4. LÓGICA DE GUARDADO (Transacción)
-            // ---------------------------------------------------
             $db = \Config\Database::connect();
             $db->transStart();
 
-            // Instanciar Modelos
-            $ordenModel = new \App\Models\OrdenTrabajoModel();
-            $dispositivoModel = new \App\Models\DispositivoModel();
-            $checklistRelModel = new \App\Models\ChecklistDispositivoModel();
-            $historialModel = new \App\Models\HistorialDispositivoModel();
-
-            // A. Insertar Orden
-            $codigoOrden = 'ORD-' . date('Y') . '-' . strtoupper(substr(uniqid(), -5));
+            $numeroOrden = $this->ordenModel->generarNumeroOrden();
 
             $ordenData = [
-                'codigo_orden' => $codigoOrden,
+                'numero_orden' => $numeroOrden,
                 'cliente_id' => $clienteId,
-                'usuario_id' => $usuarioId,
-                'tecnico_id' => null,
-                'urgencia_id' => $urgenciaId ?: null,
-                'estado' => 'recibida',
-                'created_at' => date('Y-m-d H:i:s'),
-                'mano_obra' => 0,
-                'valor_repuestos' => 0,
-                'valor_revision' => $valorRevision,
-                'mano_obra_aproximado' => $valor_mano_obra_Aproximado,
-                'repuestos_aproximado' => $valor_repuesto_Aproximado,
-                'total' => $valorRevision,
+                'usuario_recepcion_id' => session('id_usuario'),
+                'estado' => 'pendiente',
             ];
 
-            $ordenModel->insert($ordenData);
-            $ordenId = $ordenModel->getInsertID();
+            $this->ordenModel->insert($ordenData);
+            $ordenId = $this->ordenModel->getInsertID();
 
-            // C. Insertar Dispositivos (Loop)
+            if (!$ordenId) {
+                throw new \RuntimeException('No se pudo crear la orden.');
+            }
+
             foreach ($devices as $dev) {
-                // Lógica Pass/Patrón
-                $passwordFinal = '';
-                $tipoPass = $dev['tipo_pass'] ?? 'ninguno';
+                // --- 5.1 Limpiar y tipar datos del dispositivo -------------
+                $tipoId = (int) ($dev['tipo_dispositivo_id'] ?? 0);
+                $marcaId = (int) ($dev['marca_id'] ?? 0);
+                $modeloId = !empty($dev['modelo_id']) ? (int) $dev['modelo_id'] : null;
+                $tecnicoId = !empty($dev['tecnico_id']) ? (int) $dev['tecnico_id'] : null;
+                $prioridadId = !empty($dev['prioridad_dispositivo_id']) ? (int) $dev['prioridad_dispositivo_id'] : null;
+                $serieImei = !empty($dev['serie_imei']) ? trim($dev['serie_imei']) : null;
+                $tipoPass = $dev['tipo_pass'] ?? 'sin_clave';
+                $passCode = null;
+                $observaciones = trim($dev['observaciones'] ?? '');
+                $problemaIds = $dev['problema_reportado'] ?? [];
+                $accesorioIds = $dev['accesorios'] ?? [];
+                $detalleIds = $dev['detalles'] ?? [];
 
-                if ($tipoPass === 'patron') {
-                    $passwordFinal = $dev['patron_data'] ?? '';
-                } elseif (in_array($tipoPass, ['contrasena', 'pin'])) {
-                    $passwordFinal = $dev['pass_code'] ?? '';
+                if ($tipoId === 0 || $marcaId === 0) {
+                    throw new \RuntimeException('Tipo de dispositivo y marca son obligatorios.');
                 }
 
-                // Obtener el técnico específico de este dispositivo
-                $tecnicoDispositivo = !empty($dev['tecnico_id']) ? $dev['tecnico_id'] : null;
+                if (empty($problemaIds)) {
+                    throw new \RuntimeException('Debe indicar al menos un problema por dispositivo.');
+                }
 
-                $dispositivoInsert = [
+                // --- 5.2 Manejar contraseña/patrón -------------------------
+                if ($tipoPass !== 'sin_clave' && $tipoPass !== 'huella') {
+                    $rawPass = $tipoPass === 'patron'
+                        ? ($dev['patron_data'] ?? '')
+                        : ($dev['pass_code'] ?? '');
+
+                    // Cifrar con AES-256-CBC usando APP_KEY como clave
+                    if (!empty($rawPass)) {
+                        $key = hex2bin(substr(hash('sha256', env('encryption.key')), 0, 64));
+                        $iv = openssl_random_pseudo_bytes(16);
+                        $cifrado = openssl_encrypt($rawPass, 'AES-256-CBC', $key, 0, $iv);
+                        $passCode = base64_encode($iv . '::' . $cifrado);
+                    }
+                }
+
+                // --- 5.3 Obtener costo de prioridad ------------------------
+                $costoPrioridad = 0.00;
+                if ($prioridadId) {
+                    $prioridad = $this->prioridadModel->find($prioridadId);
+                    $costoPrioridad = (float) ($prioridad['costo_adicional'] ?? 0);
+                }
+
+                // --- 5.4 Calcular precios y tiempo por cada problema -------
+                $problemasData = [];
+                $tiempoTotalHoras = 0.00;
+                $totalManoObra = 0.00;
+                $totalRepuesto = 0.00;
+
+                foreach ($problemaIds as $probId) {
+                    $probId = (int) $probId;
+
+                    // Obtener datos del problema del catálogo
+                    $problema = $db->table('problemas')
+                        ->where('id', $probId)
+                        ->where('activo', 1)
+                        ->get()->getRowArray();
+
+                    if (!$problema) {
+                        throw new \RuntimeException("Problema ID {$probId} no encontrado o inactivo.");
+                    }
+
+                    // Buscar precio: primero por modelo específico, luego genérico
+                    $precio = null;
+                    if ($modeloId) {
+                        $precio = $db->table('precios_base')
+                            ->where('problema_id', $probId)
+                            ->where('modelo_id', $modeloId)
+                            ->get()->getRowArray();
+                    }
+                    // Fallback: precio genérico sin modelo
+                    if (!$precio) {
+                        $precio = $db->table('precios_base')
+                            ->where('problema_id', $probId)
+                            ->where('modelo_id IS NULL', null, false)
+                            ->get()->getRowArray();
+                    }
+
+                    $precioMO = (float) ($precio['precio_mano_obra'] ?? 0);
+                    $precioRep = (float) ($precio['precio_repuesto'] ?? 0);
+                    $tiempoHrs = (float) $problema['tiempo_reparacion_horas'];
+
+                    $tiempoTotalHoras += $tiempoHrs;
+                    $totalManoObra += $precioMO;
+                    $totalRepuesto += $precioRep;
+
+                    $problemasData[] = [
+                        'problema_id' => $probId,
+                        'tiempo_reparacion_horas' => $tiempoHrs,
+                        'precio_mano_obra' => $precioMO,
+                        'precio_repuesto' => $precioRep,
+                        'observacion' => null,
+                    ];
+                }
+
+                $precioTotal = $totalManoObra + $totalRepuesto + $costoPrioridad;
+
+                // --- 5.5 Calcular fecha estimada de entrega ----------------
+                $fechaEstimada = $this->calcularFechaEntrega(
+                    $tecnicoId,
+                    $tiempoTotalHoras,
+                    $prioridadId,
+                    $db
+                );
+
+                // --- 5.6 Insertar dispositivo_orden ------------------------
+                $dispositivoId = $this->dispositivoModel->insert([
                     'orden_id' => $ordenId,
-                    'tipo_dispositivo_id' => $dev['tipo_dispositivo_id'] ?? null,
-                    'tecnico_id' => $tecnicoDispositivo,
-                    'marca' => $dev['marca'],
-                    'modelo' => $dev['modelo'],
-                    'serie_imei' => $dev['serie_imei'] ?? null,
-                    'problema_reportado' => $dev['problema_reportado'] ?? '',
-                    'tipo_pass' => $tipoPass,
-                    'pass_code' => $passwordFinal,
-                    'estado_reparacion' => 'Dispositivo recibido e ingresado',
-                    'observaciones' => $dev['observaciones'] ?? null,
-                    'created_at' => date('Y-m-d H:i:s')
-                ];
+                    'tipo_dispositivo_id' => $tipoId,
+                    'marca_id' => $marcaId,
+                    'modelo_id' => $modeloId,
+                    'modelo_texto' => null,
+                    'serie_imei' => $serieImei,
+                    'prioridad_id' => $prioridadId,
+                    'tecnico_id' => $tecnicoId,
+                    'relato_cliente' => $observaciones ?: null,
+                    'tipo_seguridad' => $tipoPass,
+                    'clave_acceso' => $passCode,
+                    'costo_prioridad' => $costoPrioridad,
+                    'precio_total' => $precioTotal,
+                    'tiempo_total_horas' => $tiempoTotalHoras,
+                    'comision_tecnico' => null,
+                    'fecha_estimada_entrega' => $fechaEstimada,
+                    'fecha_real_entrega' => null,
+                    'estado' => 'pendiente',
+                ]);
 
-                $dispositivoModel->insert($dispositivoInsert);
-                $dispositivoId = $dispositivoModel->getInsertID();
+                if (!$dispositivoId) {
+                    throw new \RuntimeException('No se pudo registrar el dispositivo.');
+                }
 
-                // C. Crear Historial Inicial
-                $historialModel->insert([
-                    'dispositivo_id' => $dispositivoId,
-                    'usuario_id' => $usuarioId,
+                // --- 5.7 Insertar problemas (dispositivo_problemas) --------
+                foreach ($problemasData as &$pd) {
+                    $pd['dispositivo_orden_id'] = $dispositivoId;
+                }
+                unset($pd);
+
+                if (!$this->dispositivoProblemaModel->insertBatch($problemasData)) {
+                    throw new \RuntimeException('No se pudieron registrar los problemas del dispositivo.');
+                }
+
+                // --- 5.8 Insertar accesorios -------------------------------
+                if (!empty($accesorioIds)) {
+                    $accesoriosInsert = array_map(fn($aid) => [
+                        'dispositivo_orden_id' => $dispositivoId,
+                        'accesorio_id' => (int) $aid,
+                        'accesorio_texto' => null,
+                        'cantidad' => 1,
+                        'observacion' => null,
+                    ], $accesorioIds);
+
+                    if (!$this->dispositivosAccesoriosModel->insertBatch($accesoriosInsert)) {
+                        throw new \RuntimeException('No se pudieron registrar los accesorios.');
+                    }
+                }
+
+                // --- 5.9 Insertar detalles físicos -------------------------
+                if (!empty($detalleIds)) {
+                    $detallesInsert = array_map(fn($did) => [
+                        'dispositivo_orden_id' => $dispositivoId,
+                        'detalle_id' => (int) $did,
+                        'detalle_texto' => null,
+                    ], $detalleIds);
+
+                    if (!$this->dispositivoDetallesModel->insertBatch($detallesInsert)) {
+                        throw new \RuntimeException('No se pudieron registrar los detalles físicos.');
+                    }
+                }
+
+                // --- 5.10 Registrar historial de estado inicial ------------
+                $this->historialEstadosModel->insert([
+                    'dispositivo_orden_id' => $dispositivoId,
                     'estado_anterior' => null,
-                    'estado_nuevo' => 'recibida',
-                    'comentario' => 'Ingreso del equipo a taller. ' . ($tecnicoDispositivo ? 'Asignado a técnico.' : 'Sin asignar.'),
-                    'created_at' => date('Y-m-d H:i:s')
+                    'estado_nuevo' => 'pendiente',
+                    'usuario_id' => session('id_usuario'),
+                    'observacion' => 'Ingreso del dispositivo al sistema.',
                 ]);
             }
 
             $db->transComplete();
 
             if ($db->transStatus() === false) {
-                throw new \Exception('Error de base de datos al confirmar la orden.');
+                return redirectView('recepcionista/ordenes/crear', null, [['Ocurrió un error al guardar la orden.', 'error', 'top-end']]);
             }
 
-            // ÉXITO: Redirigimos al listado
-            return redirectView('recepcionista/ordenes', null, [['Orden ' . $codigoOrden . ' generada exitosamente', 'success', 'top-end']], null);
+            // Fetch client data to get cedula for PDF printing
+            $clienteModel = new \App\Models\ClienteModel();
+            $clienteInfo = $clienteModel->find($clienteId);
+            $cedulaCliente = $clienteInfo['cedula'] ?? '';
+
+            $urlPdf = base_url('tecnico/ordenes/imprimir/' . $ordenId . '/ticket');
+
+            (new \App\Services\ReparacionEmailService())
+                ->enviarIngresoOrden($ordenId, $dispositivoId);
+
+            return redirectView(
+                'recepcionista/ordenes',
+                null,
+                [
+                    [
+                        'Orden ' . $numeroOrden . ' generada correctamente',
+                        'success',
+                        'center',
+                        base_url('recepcionista/ordenes/imprimir/' . $ordenId . '/ticket'),
+                        base_url('recepcionista/ordenes/imprimir/' . $ordenId . '/carta'),
+                        base_url('recepcionista/ordenes/imprimir/' . $ordenId)
+                    ]
+                ],
+                null
+            );
 
         } catch (\Exception $e) {
             log_message('error', '[Recepcionista/OrdenController::guardar] ' . $e->getMessage());
-            return redirectView('recepcionista/ordenes/crear', null, [['Error del sistema: ' . $e->getMessage(), 'error', 'top-end']], $data ?? []);
+            return redirectView('recepcionista/ordenes/crear', null, [['Error: ' . $e->getMessage(), 'error', 'top-end']]);
         }
     }
 
-    public function ver($id)
+
+    private function calcularFechaEntrega(?int $tecnicoId, float $horasNecesarias, ?int $prioridadId, $db): string
+    {
+        // 1. Determinar carga inicial
+        $horasCarga = 0;
+        if ($tecnicoId) {
+            $carga = $db->table('dispositivos_orden')
+                ->selectSum('tiempo_total_horas', 'total')
+                ->whereIn('estado', ['pendiente', 'en_proceso'])
+                ->where('tecnico_id', $tecnicoId)
+                ->get()->getRow();
+            $horasCarga = (float) ($carga->total ?? 0);
+        } else {
+            // COLA GENERAL: Si no hay técnico, sumamos todo lo pendiente del taller
+            $cargaGeneral = $db->table('dispositivos_orden')
+                ->selectSum('tiempo_total_horas', 'total')
+                ->whereIn('estado', ['pendiente'])
+                ->where('tecnico_id', null)
+                ->get()->getRow();
+            $horasCarga = (float) ($cargaGeneral->total ?? 24); // Mínimo 24h de diagnóstico si está vacío
+        }
+
+        $horasTotales = $horasCarga + $horasNecesarias;
+
+        // 2. Motor de tiempo laboral (Iterativo)
+        $fechaActual = new \DateTime();
+        $horasRestantes = $horasTotales;
+
+        // Traer horarios de la base de datos para no hacer consultas en el loop
+        $horarios = $db->table('horarios_atencion')->get()->getResultArray();
+        $configHoras = [];
+        foreach ($horarios as $h) {
+            $configHoras[$h['dia_semana']] = $h;
+        }
+
+        while ($horasRestantes > 0) {
+            $diaActual = (int) $fechaActual->format('w');
+
+            // Si el día está cerrado, saltar al siguiente día a las 00:00
+            if (!isset($configHoras[$diaActual]) || $configHoras[$diaActual]['abierto'] == 0) {
+                $fechaActual->modify('+1 day')->setTime(0, 0);
+                continue;
+            }
+
+            $apertura = new \DateTime($fechaActual->format('Y-m-d') . ' ' . $configHoras[$diaActual]['hora_apertura']);
+            $cierre = new \DateTime($fechaActual->format('Y-m-d') . ' ' . $configHoras[$diaActual]['hora_cierre']);
+
+            // Si la hora actual es antes de abrir, empezamos a contar desde la apertura
+            if ($fechaActual < $apertura) {
+                $fechaActual = clone $apertura;
+            }
+
+            // Si ya pasó la hora de cierre, saltar al día siguiente
+            if ($fechaActual >= $cierre) {
+                $fechaActual->modify('+1 day')->setTime(0, 0);
+                continue;
+            }
+
+            // Calcular cuánto tiempo queda disponible hoy
+            $intervaloA_Cierre = $fechaActual->diff($cierre);
+            $horasDisponiblesHoy = $intervaloA_Cierre->h + ($intervaloA_Cierre->i / 60);
+
+            if ($horasRestantes <= $horasDisponiblesHoy) {
+                // Terminamos dentro del horario de hoy
+                $fechaActual->modify("+" . round($horasRestantes * 60) . " minutes");
+                $horasRestantes = 0;
+            } else {
+                // Usamos lo que queda de hoy y saltamos al siguiente
+                $horasRestantes -= $horasDisponiblesHoy;
+                $fechaActual->modify('+1 day')->setTime(0, 0);
+            }
+        }
+
+        return $fechaActual->format('Y-m-d H:i:s');
+    }
+
+    public function getDispositivoOrden($ordenId)
+   {
+        $db = \Config\Database::connect();
+
+        // Verificar que la orden existe
+        $orden = $db->table('ordenes')->where('id', $ordenId)->get()->getRowArray();
+
+        if (!$orden) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Orden no encontrada.',
+            ])->setStatusCode(404);
+        }
+
+        $dispositivos = $db->table('dispositivos_orden do')
+            ->select([
+                'do.id',
+                'do.estado',
+                'do.precio_total',
+                'do.fecha_real_entrega',
+                'do.fecha_estimada_entrega',
+                'td.nombre   AS tipo_dispositivo',
+                'm.nombre    AS marca',
+                // Si tiene modelo en catálogo lo usa, si no usa el texto libre
+                'COALESCE(mo.nombre, do.modelo_texto) AS modelo',
+            ])
+            ->join('tipos_dispositivo td', 'td.id = do.tipo_dispositivo_id')
+            ->join('marcas m', 'm.id  = do.marca_id')
+            ->join('modelos mo', 'mo.id = do.modelo_id', 'left')
+            ->where('do.orden_id', $ordenId)
+            ->orderBy('do.id', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        return $this->response->setJSON([
+            'success' => true,
+            'orden_id' => $ordenId,
+            'dispositivos' => $dispositivos,
+        ]);
+    }
+
+    public function imprimir(int $ordenId, ?string $tipoImpresion = null)
     {
         $db = \Config\Database::connect();
 
-        // Obtener orden con datos del cliente
-        $ordenModel = new OrdenesModel();
-        $orden = $ordenModel->select('ordenes.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula, p.nombre as nombre_prioridad')
-            ->join('clientes as c', 'c.id = ordenes.cliente_id')
-            ->join('prioridades as p', 'p.id = ordenes.prioridad_id', 'left')
-            ->where('ordenes.id', $id)
-            ->first();
+        // 1. Orden + cliente
+        $orden = $db->table('ordenes o')
+            ->select([
+                'o.id',
+                'o.numero_orden',
+                'o.estado',
+                'o.observaciones_generales',
+                'o.created_at AS fecha_ingreso',
+                'c.nombres    AS cliente_nombre',
+                'c.apellidos  AS cliente_apellido',
+                'c.telefono   AS cliente_telefono',
+                'c.email      AS cliente_email',
+                'c.cedula AS cliente_cedula',
+                'u.nombre     AS recepcionista',
+            ])
+            ->join('clientes c', 'c.id = o.cliente_id')
+            ->join('usuarios u', 'u.id = o.usuario_recepcion_id')
+            ->where('o.id', $ordenId)
+            ->get()->getRowArray();
 
         if (!$orden) {
-            return redirect()->back()->with('error', 'Orden no encontrada');
+            return redirect()->to(base_url('tecnico/dispositivos/pool'))
+                ->with('error', 'Orden no encontrada.');
         }
 
-        // Obtener dispositivos de la orden
-        $dispositivoModel = new DispositivoModel();
-        $dispositivos = $dispositivoModel->select('dispositivos.*, td.nombre as nombre_tipo, td.icono')
-            ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left')
-            ->where('orden_id', $id)
-            ->findAll();
+        // 2. Dispositivos de la orden
+        $dispositivos = $db->table('dispositivos_orden do')
+            ->select([
+                'do.id',
+                'do.estado',
+                'do.serie_imei',
+                'do.tipo_seguridad',
+                'do.relato_cliente',
+                'do.precio_total',
+                'do.costo_prioridad',
+                'do.tiempo_total_horas',
+                'do.fecha_estimada_entrega',
+                'do.fecha_real_entrega',
+                'do.created_at             AS fecha_ingreso',
+                'td.nombre                 AS tipo_dispositivo',
+                'm.nombre                  AS marca',
+                'COALESCE(mo.nombre, do.modelo_texto) AS modelo',
+                'pr.nombre                 AS prioridad',
+                'pr.color_badge            AS prioridad_color',
+                'u.nombre                  AS tecnico',
+            ])
+            ->join('tipos_dispositivo td', 'td.id = do.tipo_dispositivo_id')
+            ->join('marcas m', 'm.id  = do.marca_id')
+            ->join('modelos mo', 'mo.id = do.modelo_id', 'left')
+            ->join('prioridades pr', 'pr.id = do.prioridad_id', 'left')
+            ->join('usuarios u', 'u.id  = do.tecnico_id', 'left')
+            ->where('do.orden_id', $ordenId)
+            ->orderBy('do.id', 'ASC')
+            ->get()->getResultArray();
 
-        $data = [
-            'titulo' => 'Detalles de Orden - ' . $orden['codigo_orden'],
-            'orden' => $orden,
-            'dispositivos' => $dispositivos
-        ];
+        // 3. Enriquecer cada dispositivo con sus relaciones
+        foreach ($dispositivos as &$dev) {
+            $devId = $dev['id'];
 
-        return view('recepcionista/ordenes/ver', $data);
-    }
+            // Problemas con precios
+            $dev['problemas'] = $db->table('dispositivo_problemas dp')
+                ->select([
+                    'p.nombre                                      AS problema',
+                    'dp.precio_mano_obra',
+                    'dp.precio_repuesto',
+                    '(dp.precio_mano_obra + dp.precio_repuesto)   AS subtotal',
+                    'dp.observacion',
+                ])
+                ->join('problemas p', 'p.id = dp.problema_id')
+                ->where('dp.dispositivo_orden_id', $devId)
+                ->get()->getResultArray();
 
-    public function imprimir($id)
-    {
-        // 1. CARGAR MODELOS
-        $ordenModel = new OrdenesModel();
-        $dispositivoModel = new DispositivoModel();
-        $urgenciaModel = new \App\Models\UrgenciaModel();
-        $configuracionModel = new ConfiguracionModel();
-        $terminosModel = new \App\Models\TerminosCondicionesModel();
+            // Accesorios
+            $dev['accesorios'] = $db->table('dispositivo_accesorios da')
+                ->select('COALESCE(ac.nombre, da.accesorio_texto) AS accesorio, da.cantidad')
+                ->join('accesorios_catalogo ac', 'ac.id = da.accesorio_id', 'left')
+                ->where('da.dispositivo_orden_id', $devId)
+                ->get()->getResultArray();
 
-        // 2. OBTENER DATOS DE LA ORDEN
-        $orden = $ordenModel->select('ordenes.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula, p.nombre as nombre_prioridad')
-            ->join('clientes as c', 'c.id = ordenes.cliente_id')
-            ->join('prioridades as p', 'p.id = ordenes.prioridad_id', 'left')
-            ->where('ordenes.id', $id)
-            ->first();
+            // Detalles físicos
+            $dev['detalles'] = $db->table('dispositivo_detalles dd')
+                ->select('COALESCE(dc.nombre, dd.detalle_texto) AS detalle')
+                ->join('detalles_catalogo dc', 'dc.id = dd.detalle_id', 'left')
+                ->where('dd.dispositivo_orden_id', $devId)
+                ->get()->getResultArray();
 
-        if (!$orden) {
-            return redirect()->back()->with('error', 'Orden no encontrada');
+            // Última observación para el cliente (útil para cancelaciones)
+            $ultimaObs = $db->table('historial_estados')
+                ->select('observacion_cliente')
+                ->where('dispositivo_orden_id', $devId)
+                ->where('observacion_cliente IS NOT NULL', null, false)
+                ->orderBy('id', 'DESC')
+                ->limit(1)
+                ->get()->getRowArray();
+
+            $dev['comentario_cliente'] = $ultimaObs['observacion_cliente'] ?? null;
         }
+        unset($dev);
 
-        $urgencias = $urgenciaModel->where('activo', 1)->orderBy('recargo', 'ASC')->findAll();
+        // 4. Configuración de empresa
+        $empresaConfigModel = new \App\Models\ConfiguracionModel();
+        $empresaConfig = $empresaConfigModel->getConfig();
 
-        // 3. OBTENER DISPOSITIVOS
-        $dispositivos = $dispositivoModel->select('dispositivos.*, td.nombre as nombre_tipo, td.icono')
-            ->join('tipos_dispositivo as td', 'td.id = dispositivos.tipo_dispositivo_id', 'left')
-            ->where('orden_id', $id)
-            ->findAll();
-
-        // 4. LÓGICA DE TÉRMINOS Y CONDICIONES
-        $tiposIds = [];
-        foreach ($dispositivos as $disp) {
-            if (!empty($disp['tipo_dispositivo_id'])) {
-                $tiposIds[] = $disp['tipo_dispositivo_id'];
-            }
-        }
-        $tiposIds = array_unique($tiposIds);
-
-        $builder = $terminosModel->builder();
-        $builder->where('activo', 1);
-        $builder->groupStart();
-        $builder->where('tipo_dispositivo_id', null);
-        if (!empty($tiposIds)) {
-            $builder->orWhereIn('tipo_dispositivo_id', $tiposIds);
-        }
-        $builder->groupEnd();
-        $builder->orderBy('tipo_dispositivo_id IS NOT NULL', 'ASC', false);
-        $terminos = $builder->get()->getResultArray();
-
-        // 5. GENERAR EL QR
-        $urlSeguimiento = base_url("consulta/orden/" . $orden['codigo_orden']);
+        // 5. QR Code con el número de orden
+        $urlSeguimiento = base_url("consulta/orden/" . $orden['numero_orden']);
         $builderQr = new Builder(
             writer: new PngWriter(),
             writerOptions: [],
@@ -351,35 +577,66 @@ class OrdenController extends BaseController
         );
         $qrCodeBase64 = $builderQr->build()->getDataUri();
 
-        // 6. CONFIGURACIÓN EMPRESA
-        $configuracion = $configuracionModel->first();
+        // 6. Términos y condiciones
+        $terminos = [];
+        if (!empty($empresaConfig['terminos_condiciones'])) {
+            $decoded = json_decode($empresaConfig['terminos_condiciones'], true);
+            $terminos = is_array($decoded) ? $decoded : [];
+        }
 
-        // 7. PREPARAR DATOS VISTA
+        if (empty($terminos)) {
+            $terminos = [
+                'El taller no se hace responsable por daños preexistentes no reportados al momento del ingreso del equipo.',
+                'El cliente debe retirar su equipo dentro de los 30 días posteriores a la notificación de reparación completada.',
+                'Los equipos no retirados en el plazo indicado podrán generar costos de almacenamiento.',
+                'La garantía de reparación cubre únicamente la falla reparada y tiene una duración de 30 días.',
+                'El retiro del equipo implica la aceptación del trabajo realizado y el monto cobrado.',
+            ];
+        }
+
+        // 7. Preparar datos para la vista
         $data = [
             'orden' => $orden,
-            'urgencias' => $urgencias,
             'dispositivos' => $dispositivos,
             'qr_code' => $qrCodeBase64,
-            'logo_path' => $configuracion['logo_path'] ?? "",
-            'nombre_empresa' => $configuracion['nombre_empresa'] ?? 'Mi Empresa',
-            'telefono_empresa' => $configuracion['telefono'] ?? '',
-            'direccion_empresa' => $configuracion['direccion'] ?? '',
-            'email_empresa' => isset($configuracion['email']) ? $configuracion['email'] : '',
-            'terminos' => $terminos
+            'empresa_config' => $empresaConfig,
+            'terminos' => $terminos,
         ];
 
-        // 8. RENDERIZAR PDF
+        // 8. Renderizar PDF con Dompdf
         $options = new Options();
         $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
-        $options->set('chroot', FCPATH);
+        $options->set('chroot', [FCPATH]);
 
         $dompdf = new Dompdf($options);
-        $html = view('recepcionista/ordenes/pdf_template', $data);
+
+        // ── 9. Definir variables por defecto (A4 Horizontal) ───
+        $vista = 'admin/ordenes/pdf_orden';
+        $tamanioPapel = 'A4';
+        $orientacion = 'landscape';
+
+        // ── 10. Modificar según el tipo de impresión ───────────
+        if ($tipoImpresion === 'ticket') {
+            $vista = 'admin/pdf/orden_ticket';
+            // 226.77 puntos = 80mm (ancho ideal para ticketeras térmicas)
+            // 800 puntos de alto (lo puedes aumentar si la orden es muy larga)
+            $tamanioPapel = [0, 0, 226.77, 800];
+            $orientacion = 'portrait';
+        } elseif ($tipoImpresion === 'carta') {
+            $vista = 'admin/pdf/orden_carta';
+            $tamanioPapel = 'carta';
+            $orientacion = 'portrait';
+        }
+
+        // ── 11. Renderizado Unificado (DRY) ────────────────────
+        $html = view($vista, $data);
+
         $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->setPaper($tamanioPapel, $orientacion);
         $dompdf->render();
 
+        // ── 12. Generar y retornar el PDF ──────────────────────
         $pdf = $dompdf->output();
 
         return $this->response
