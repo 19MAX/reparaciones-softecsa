@@ -214,7 +214,6 @@ Detalles del Cliente
                 telefono: $('#edit_telefono').val(),
                 telefono_secundario: $('#edit_telefono_secundario').val(),
                 email: $('#edit_email').val(),
-                [csrf_token]: csrf_hash
             };
 
             fetch('<?= base_url('global/actualizar-cliente') ?>', {

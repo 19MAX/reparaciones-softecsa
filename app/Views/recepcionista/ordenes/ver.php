@@ -22,7 +22,7 @@
             <i class="icon-arrow-right"></i>
         </li>
         <li class="nav-item">
-            <a href="#"><?= esc($orden['codigo_orden']) ?></a>
+            <a href="#"><?= esc($orden['numero_orden']) ?></a>
         </li>
     </ul>
 </div>
@@ -33,7 +33,7 @@
             <div class="card-header">
                 <div class="d-flex align-items-center justify-content-between">
                     <h4 class="card-title mb-0">
-                        <i class="fas fa-file-alt me-2"></i>Orden <?= esc($orden['codigo_orden']) ?>
+                        <i class="fas fa-file-alt me-2"></i>Orden <?= esc($orden['numero_orden']) ?>
                     </h4>
                     <div>
                         <?php if ((int) $orden['estado'] !== ESTADO_ORDEN_ENTREGADA && (int) $orden['estado'] !== ESTADO_ORDEN_CANCELADA): ?>

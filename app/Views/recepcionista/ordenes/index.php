@@ -40,40 +40,14 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <form method="GET" action="<?= base_url('recepcionista/ordenes') ?>" class="row g-2">
-                            <div class="col-auto">
-                                <input type="date" name="fecha_desde" class="form-control form-control-sm" value="<?= $fecha_desde ?? '' ?>" placeholder="Desde">
-                            </div>
-                            <div class="col-auto">
-                                <input type="date" name="fecha_hasta" class="form-control form-control-sm" value="<?= $fecha_hasta ?? '' ?>" placeholder="Hasta">
-                            </div>
-                            <div class="col-auto">
-                                <select name="estado" class="form-select form-select-sm">
-                                    <option value="">Todos los estados</option>
-                                    <option value="recibida" <?= ($estado ?? '') === 'recibida' ? 'selected' : '' ?>>Recibida</option>
-                                    <option value="en_proceso" <?= ($estado ?? '') === 'en_proceso' ? 'selected' : '' ?>>En Proceso</option>
-                                    <option value="listo" <?= ($estado ?? '') === 'listo' ? 'selected' : '' ?>>Listo</option>
-                                    <option value="entregada" <?= ($estado ?? '') === 'entregada' ? 'selected' : '' ?>>Entregada</option>
-                                </select>
-                            </div>
-                            <div class="col-auto">
-                                <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filtrar</button>
-                                <a href="<?= base_url('recepcionista/ordenes') ?>" class="btn btn-secondary btn-sm">Limpiar</a>
-                            </div>
-                        </form>
-                    </div>
-                </div>
                 <div class="table-responsive">
-                    <table id="ordenes-datatables" class="table table-bordered ">
+                    <table id="ordenes-datatables" class="display table table-hover table-striped  align-middle">
                         <thead>
                             <tr>
                                 <th># Orden</th>
                                 <th>Fecha</th>
                                 <th>Cliente</th>
                                 <th>Dispositivos</th>
-                                <th>Prioridad</th>
                                 <th>Estado</th>
                                 <th style="width: 10%">Acciones</th>
                             </tr>
@@ -84,7 +58,10 @@
                                 <?php foreach ($ordenes as $orden): ?>
                                     <tr>
                                         <td class="fw-bold text-primary">
-                                            <?= esc($orden['codigo_orden']) ?>
+                                            <a href="<?= base_url('consulta/orden/' . $orden['numero_orden']) ?>"
+                                                data-bs-toggle="tooltip" title="Ver Seguimiento Público">
+                                                <?= esc($orden['numero_orden']) ?>
+                                            </a>
                                         </td>
                                         <td>
                                             <?= formatear_fecha($orden['created_at'], 'solo_fecha') ?>
@@ -98,25 +75,26 @@
                                                 <?= esc($orden['nombres']) ?>         <?= esc($orden['apellidos']) ?>
                                             </div>
                                         </td>
-                                        <td>
-                                            <span class="d-inline-block text-truncate" style="max-width: 200px;"
-                                                title="<?= esc($orden['equipos_resumen']) ?>">
-                                                <?= esc($orden['equipos_resumen']) ?>
-                                            </span>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-info btn-ver-dispositivos"
+                                                data-id="<?= $orden['id'] ?>" data-bs-toggle="modal"
+                                                data-bs-target="#dispositivosModal">
+                                                <?= $orden['total_dispositivos'] ?>
+                                                <i class="fas fa-eye ms-1"></i>
+                                            </button>
                                         </td>
                                         <td>
-                                            <?=get_badge_urgencia($orden)?>
-                                        </td>
-                                        <td>
-                                            <?=get_badge_estado_orden($orden['estado'])?>
+                                            <?= estadoPill($orden['estado']) ?>
                                         </td>
                                         <td>
                                             <div class="form-button-action">
+
                                                 <div class="dropdown d-inline">
                                                     <a class="btn btn-link btn-secondary dropdown-toggle" href="#" role="button"
                                                         data-bs-toggle="dropdown" aria-expanded="false" title="Imprimir">
                                                         <i class="fas fa-print"></i>
                                                     </a>
+
                                                     <ul class="dropdown-menu">
                                                         <li>
                                                             <a class="dropdown-item"
@@ -141,19 +119,6 @@
                                                         </li>
                                                     </ul>
                                                 </div>
-
-                                                <!-- Enlace para ver el seguimiento público: -->
-                                                <a href="<?= base_url('consulta/orden/' . $orden['codigo_orden']) ?>"
-                                                    target="_blank" class="btn btn-link btn-info" data-bs-toggle="tooltip"
-                                                    title="Ver Seguimiento Público">
-                                                    <i class="fas fa-truck-moving"></i>
-                                                </a>
-
-                                                <a href="<?= base_url('recepcionista/ordenes/ver/' . $orden['id']) ?>"
-                                                    class="btn btn-link btn-primary" data-bs-toggle="tooltip"
-                                                    title="Ver Detalles">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
                                             </div>
                                         </td>
                                     </tr>
@@ -167,10 +132,53 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="dispositivosModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
 
+            <div class="modal-header bg-info">
+                <h5 class="modal-title text-white fw-bold">
+                    Dispositivos de la Orden
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Dispositivo</th>
+                                <th>Estado</th>
+                                <th>Fecha Entrega</th>
+                                <th>Precio</th>
+                                <th style="width:120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-dispositivos-body">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    Cargando dispositivos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function () {
         // Inicializar DataTables con ordenamiento por la primera columna (ID) descendente
@@ -185,6 +193,125 @@
                     buttons: ['pageLength', 'copy', 'excel', 'pdf', 'colvis']
                 }
             }
+        });
+
+        // Manejo de eliminación con SweetAlert2
+        $('.btn-delete-orden').click(function (e) {
+            e.preventDefault();
+            let form = $(this).closest('form');
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "No podrás revertir esto. Se borrarán los dispositivos asociados.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            })
+        });
+
+        const tablaBody = document.getElementById('tabla-dispositivos-body');
+
+        document.querySelectorAll('.btn-ver-dispositivos').forEach(btn => {
+
+            btn.addEventListener('click', function () {
+
+                const ordenId = this.dataset.id;
+
+                tablaBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">
+                        Cargando dispositivos...
+                    </td>
+                </tr>
+            `;
+
+                fetch(`<?= base_url('recepcionista/ordenes/dispositivo') ?>/${ordenId}`)
+                    .then(response => response.json())
+                    .then(data => {
+
+                        if (!data.success) {
+                            tablaBody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="text-center text-danger">
+                                    ${data.message}
+                                </td>
+                            </tr>
+                        `;
+                            return;
+                        }
+
+                        if (data.dispositivos.length === 0) {
+                            tablaBody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    No hay dispositivos registrados.
+                                </td>
+                            </tr>
+                        `;
+                            return;
+                        }
+
+                        let filas = '';
+
+                        data.dispositivos.forEach((d, index) => {
+
+                            const fechaEntrega = d.fecha_real_entrega
+                                ? d.fecha_real_entrega
+                                : (d.fecha_estimada_entrega ?? '-');
+
+                            filas += `
+                            <tr>
+                                <td>
+                                    <strong>${d.tipo_dispositivo}</strong><br>
+                                    <small class="text-muted">
+                                        ${d.marca} ${d.modelo ?? ''}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">
+                                        ${d.estado}
+                                    </span>
+                                </td>
+                                <td>
+                                    ${fechaEntrega ?? '-'}
+                                </td>
+                                <td>
+                                    $ ${parseFloat(d.precio_total).toFixed(2)}
+                                </td>
+                                <td class="text-center">
+                                    <a href="<?= base_url('recepcionista/dispositivos/detalle') ?>/${d.id}" 
+                                       class="btn btn-sm btn-outline-primary"
+                                       title="Ver Detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                        });
+
+                        tablaBody.innerHTML = filas;
+
+                    })
+                    .catch(error => {
+                        tablaBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center text-danger">
+                                Error al cargar los dispositivos.
+                            </td>
+                        </tr>
+                    `;
+                        console.error(error);
+                    });
+
+            });
+
         });
     });
 </script>

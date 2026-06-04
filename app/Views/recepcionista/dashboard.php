@@ -91,70 +91,121 @@ Dashboard Recepcionista
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-sm table-hover align-middle">
                         <thead>
                             <tr>
-                                <th># Orden</th>
-                                <th>Fecha</th>
-                                <th>Cliente</th>
-                                <th>Equipos</th>
-                                <th>Prioridad</th>
+                                <th>Orden</th>
+                                <th>Cliente / Equipo</th>
                                 <th>Estado</th>
-                                <th>Acciones</th>
+                                <th width="140">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
+
                             <?php if (!empty($ordenesRecientes)): ?>
                                 <?php foreach ($ordenesRecientes as $orden): ?>
                                     <tr>
-                                        <td class="fw-bold text-primary">
-                                            <?= esc($orden['codigo_orden']) ?>
-                                        </td>
+
+                                        <!-- Orden y Fecha -->
                                         <td>
-                                            <?= formatear_fecha($orden['created_at'], 'solo_fecha') ?>
-                                            <br>
+                                            <div class="fw-bold text-primary">
+                                                #<?= esc($orden['numero_orden']) ?>
+                                            </div>
+
+                                            <small class="text-muted d-block">
+                                                <?= formatear_fecha($orden['created_at'], 'solo_fecha') ?>
+                                            </small>
+
                                             <small class="text-muted">
                                                 <?= date('H:i', strtotime($orden['created_at'])) ?>
                                             </small>
                                         </td>
+
+                                        <!-- Cliente y Equipos -->
                                         <td>
-                                            <div class="fw-bold">
-                                                <?= esc($orden['nombres']) ?>         <?= esc($orden['apellidos']) ?>
+                                            <div class="fw-semibold">
+                                                <?= esc($orden['nombres']) ?>
+                                                <?= esc($orden['apellidos']) ?>
                                             </div>
-                                        </td>
-                                        <td>
-                                            <span class="d-inline-block text-truncate" style="max-width: 200px;"
+
+                                            <small class="text-muted d-block"
                                                 title="<?= esc($orden['equipos_resumen']) ?>">
                                                 <?= esc($orden['equipos_resumen']) ?>
-                                            </span>
+                                            </small>
                                         </td>
+
+                                        <!-- Estado -->
                                         <td>
-                                            <?= get_badge_urgencia($orden) ?>
+                                            <?= estadoPill($orden['estado']) ?>
                                         </td>
+
+                                        <!-- Acciones -->
                                         <td>
-                                            <?= get_badge_estado_orden($orden['estado']) ?>
-                                        </td>
-                                        <td>
-                                            <div class="form-button-action">
-                                                <a href="<?= base_url('recepcionista/ordenes/ver/' . $orden['id']) ?>"
-                                                    class="btn btn-link btn-primary" data-bs-toggle="tooltip"
-                                                    title="Ver Detalles">
+                                            <div class="btn-group">
+
+                                                <!-- Ver detalle -->
+                                                <!-- <a href="<?= base_url('recepcionista/ordenes/ver/' . $orden['id']) ?>"
+                                                    class="btn btn-sm btn-outline-info"
+                                                    data-bs-toggle="tooltip"
+                                                    title="Ver detalles">
                                                     <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="<?= base_url('recepcionista/ordenes/imprimir/' . $orden['id']) ?>"
-                                                    target="_blank" class="btn btn-link btn-secondary" data-bs-toggle="tooltip"
-                                                    title="Imprimir Ticket">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
+                                                </a> -->
+
+                                                <!-- Dropdown Imprimir -->
+                                                <div class="dropdown">
+                                                    <button
+                                                        class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
+                                                        aria-expanded="false">
+                                                        <i class="fas fa-print"></i>
+                                                    </button>
+
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+
+                                                        <li>
+                                                            <a class="dropdown-item"
+                                                                href="<?= base_url('recepcionista/ordenes/imprimir/' . $orden['id'] . '/ticket') ?>"
+                                                                target="_blank">
+                                                                <i class="fas fa-file-alt me-2"></i>
+                                                                Ticket
+                                                            </a>
+                                                        </li>
+
+                                                        <li>
+                                                            <a class="dropdown-item"
+                                                                href="<?= base_url('recepcionista/ordenes/imprimir/' . $orden['id'] . '/carta') ?>"
+                                                                target="_blank">
+                                                                <i class="fas fa-file me-2"></i>
+                                                                Carta
+                                                            </a>
+                                                        </li>
+
+                                                        <li>
+                                                            <a class="dropdown-item"
+                                                                href="<?= base_url('recepcionista/ordenes/imprimir/' . $orden['id'] . '/completo') ?>"
+                                                                target="_blank">
+                                                                <i class="fas fa-file-invoice me-2"></i>
+                                                                Completo
+                                                            </a>
+                                                        </li>
+
+                                                    </ul>
+                                                </div>
+
                                             </div>
                                         </td>
+
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="7" class="text-center">No hay órdenes recientes</td>
+                                    <td colspan="4" class="text-center py-4">
+                                        No hay órdenes recientes
+                                    </td>
                                 </tr>
                             <?php endif; ?>
+
                         </tbody>
                     </table>
                 </div>
