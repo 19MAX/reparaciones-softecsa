@@ -13,7 +13,7 @@ class UsersSeeder extends Seeder
         $adminPassword = env('SEEDER_ADMIN_PASSWORD');
 
         $data = [
-            'cedula' => '0000000000',
+            'cedula' => '0291578400',
             'nombre' => 'Admin',
             'apellido' => 'Sistema',
             'password' => $adminPassword,
