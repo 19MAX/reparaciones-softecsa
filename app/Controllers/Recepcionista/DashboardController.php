@@ -35,8 +35,7 @@ class DashboardController extends BaseController
             o.*,
             c.nombres,
             c.apellidos,
-            p.nombre as nombre_prioridad,
-            p.recargo as recargo_prioridad
+            p.nombre as nombre_prioridad
         ');
         $builder->join('clientes as c', 'c.id = o.cliente_id');
         $builder->join('prioridades as p', 'p.id = o.prioridad_id', 'left');

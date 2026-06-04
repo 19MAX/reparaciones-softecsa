@@ -48,10 +48,8 @@ class OrdenController extends BaseController
             c.nombres,
             c.apellidos,
             u.nombre as nombre_prioridad,
-            u.recargo as recargo_prioridad,
-            u.descripcion as descripcion_prioridad,
             (SELECT GROUP_CONCAT(CONCAT(marca, " ", modelo) SEPARATOR ", ")
-             FROM dispositivos d WHERE d.orden_id = o.id) as equipos_resumen
+             FROM dispositivos_orden d WHERE d.orden_id = o.id) as equipos_resumen
         ');
 
         $builder->join('clientes as c', 'c.id = o.cliente_id');
@@ -266,7 +264,7 @@ class OrdenController extends BaseController
 
         // Obtener orden con datos del cliente
         $ordenModel = new OrdenesModel();
-        $orden = $ordenModel->select('ordenes.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula, p.nombre as nombre_prioridad, p.recargo as recargo')
+        $orden = $ordenModel->select('ordenes.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula, p.nombre as nombre_prioridad')
             ->join('clientes as c', 'c.id = ordenes.cliente_id')
             ->join('prioridades as p', 'p.id = ordenes.prioridad_id', 'left')
             ->where('ordenes.id', $id)
