@@ -47,10 +47,21 @@
                         <?php endif; ?>
                         <?= esc($dispositivo['marca']) ?> <?= esc($dispositivo['modelo']) ?>
                     </h4>
-                    <a href="<?= base_url('recepcionista/ordenes/ver/' . $dispositivo['orden_id']) ?>"
-                        class="btn btn-primary btn-sm">
-                        <i class="fas fa-arrow-left me-1"></i> Volver a Orden
-                    </a>
+                    <div>
+                        <?php if ((int) $dispositivo['estado_reparacion'] === ESTADO_DISPOSITIVO_LISTO_RETIRO): ?>
+                            <form action="<?= base_url('recepcionista/dispositivos/entregar/' . $dispositivo['id']) ?>" method="POST" class="d-inline">
+                                <?= csrf_field() ?>
+                                <button type="submit" class="btn btn-success btn-sm me-2"
+                                    onclick="return confirm('¿Confirmar que este dispositivo ha sido entregado al cliente?')">
+                                    <i class="fas fa-check-circle me-1"></i> Marcar como Entregado
+                                </button>
+                            </form>
+                        <?php endif; ?>
+                        <a href="<?= base_url('recepcionista/ordenes/ver/' . $dispositivo['orden_id']) ?>"
+                            class="btn btn-primary btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i> Volver a Orden
+                        </a>
+                    </div>
                 </div>
             </div>
             <div class="card-body">

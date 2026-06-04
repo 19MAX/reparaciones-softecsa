@@ -3,11 +3,11 @@
 namespace App\Controllers\Recepcionista;
 
 use App\Controllers\BaseController;
-use App\Models\ChecklistDispositivoModel;
+use App\Models\ChecklistDisposorioModel;
 use App\Models\ClienteModel;
 use App\Models\ConfiguracionModel;
 use App\Models\DispositivoModel;
-use App\Models\OrdenTrabajoModel;
+use App\Models\OrdenesModel;
 use App\Models\UrgenciaModel;
 use CodeIgniter\HTTP\ResponseInterface;
 // --- IMPORTS PARA QR CODE Y PDF ---
@@ -24,7 +24,7 @@ class OrdenController extends BaseController
     protected $urgenciaModel;
     protected $usuarioModel;
     protected $tipoDispositivoModel;
-    protected $ordenTrabajoModel;
+    protected $ordenesModel;
     protected $dispositivoModel;
 
     public function __construct()
@@ -33,7 +33,7 @@ class OrdenController extends BaseController
         $this->urgenciaModel = new \App\Models\UrgenciaModel();
         $this->usuarioModel = new \App\Models\UsuarioModel();
         $this->tipoDispositivoModel = new \App\Models\TipoDispositivoModel();
-        $this->ordenTrabajoModel = new \App\Models\OrdenTrabajoModel();
+        $this->ordenesModel = new OrdenesModel();
         $this->dispositivoModel = new \App\Models\DispositivoModel();
     }
 
@@ -42,7 +42,7 @@ class OrdenController extends BaseController
         $db = \Config\Database::connect();
 
         // Construimos la consulta
-        $builder = $db->table('ordenes_trabajo as o');
+        $builder = $db->table('ordenes as o');
         $builder->select('
             o.*,
             c.nombres,
@@ -55,7 +55,22 @@ class OrdenController extends BaseController
         ');
 
         $builder->join('clientes as c', 'c.id = o.cliente_id');
-        $builder->join('urgencias as u', 'u.id = o.urgencia_id', 'left');
+        $builder->join('prioridades as u', 'u.id = o.prioridad_id', 'left');
+
+        // Apply filters
+        $fecha_desde = $this->request->getGet('fecha_desde');
+        $fecha_hasta = $this->request->getGet('fecha_hasta');
+        $estado = $this->request->getGet('estado');
+
+        if (!empty($fecha_desde)) {
+            $builder->where('o.created_at >=', $fecha_desde . ' 00:00:00');
+        }
+        if (!empty($fecha_hasta)) {
+            $builder->where('o.created_at <=', $fecha_hasta . ' 23:59:59');
+        }
+        if (!empty($estado)) {
+            $builder->where('o.estado', $estado);
+        }
 
         $builder->orderBy('o.id', 'DESC');
 
@@ -63,7 +78,10 @@ class OrdenController extends BaseController
 
         $data = [
             'titulo' => 'Gestión de Órdenes',
-            'ordenes' => $ordenes
+            'ordenes' => $ordenes,
+            'fecha_desde' => $fecha_desde,
+            'fecha_hasta' => $fecha_hasta,
+            'estado' => $estado
         ];
 
         return view('recepcionista/ordenes/index', $data);
@@ -247,11 +265,11 @@ class OrdenController extends BaseController
         $db = \Config\Database::connect();
 
         // Obtener orden con datos del cliente
-        $ordenModel = new OrdenTrabajoModel();
-        $orden = $ordenModel->select('ordenes_trabajo.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula, u.nombre as nombre_urgencia, u.recargo')
-            ->join('clientes as c', 'c.id = ordenes_trabajo.cliente_id')
-            ->join('urgencias as u', 'u.id = ordenes_trabajo.urgencia_id', 'left')
-            ->where('ordenes_trabajo.id', $id)
+        $ordenModel = new OrdenesModel();
+        $orden = $ordenModel->select('ordenes.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula, p.nombre as nombre_prioridad, p.recargo as recargo')
+            ->join('clientes as c', 'c.id = ordenes.cliente_id')
+            ->join('prioridades as p', 'p.id = ordenes.prioridad_id', 'left')
+            ->where('ordenes.id', $id)
             ->first();
 
         if (!$orden) {
@@ -277,17 +295,17 @@ class OrdenController extends BaseController
     public function imprimir($id)
     {
         // 1. CARGAR MODELOS
-        $ordenModel = new OrdenTrabajoModel();
+        $ordenModel = new OrdenesModel();
         $dispositivoModel = new DispositivoModel();
         $urgenciaModel = new \App\Models\UrgenciaModel();
         $configuracionModel = new ConfiguracionModel();
         $terminosModel = new \App\Models\TerminosCondicionesModel();
 
         // 2. OBTENER DATOS DE LA ORDEN
-        $orden = $ordenModel->select('ordenes_trabajo.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula, u.nombre as nombre_urgencia')
-            ->join('clientes as c', 'c.id = ordenes_trabajo.cliente_id')
-            ->join('urgencias as u', 'u.id = ordenes_trabajo.urgencia_id', 'left')
-            ->where('ordenes_trabajo.id', $id)
+        $orden = $ordenModel->select('ordenes.*, c.nombres, c.apellidos, c.telefono, c.email, c.cedula, p.nombre as nombre_prioridad')
+            ->join('clientes as c', 'c.id = ordenes.cliente_id')
+            ->join('prioridades as p', 'p.id = ordenes.prioridad_id', 'left')
+            ->where('ordenes.id', $id)
             ->first();
 
         if (!$orden) {

@@ -15,34 +15,31 @@ class DashboardController extends BaseController
         $hoy = date('Y-m-d');
 
         // Órdenes creadas hoy
-        $ordenesHoy = $db->table('ordenes_trabajo')
+        $ordenesHoy = $db->table('ordenes')
             ->where('DATE(created_at)', $hoy)
             ->countAllResults();
 
         // Órdenes activas (no entregadas ni canceladas)
-        $ordenesActivas = $db->table('ordenes_trabajo')
+        $ordenesActivas = $db->table('ordenes')
             ->whereNotIn('estado', ['entregado', 'cancelado'])
             ->countAllResults();
 
         // Órdenes listas para retiro
-        $ordenesListasRetiro = $db->table('ordenes_trabajo')
+        $ordenesListasRetiro = $db->table('ordenes')
             ->where('estado', 'listo_para_retiro')
             ->countAllResults();
 
         // Últimas 10 órdenes
-        $builder = $db->table('ordenes_trabajo as o');
+        $builder = $db->table('ordenes as o');
         $builder->select('
             o.*,
             c.nombres,
             c.apellidos,
-            u.nombre as nombre_prioridad,
-            u.recargo as recargo_prioridad,
-            u.descripcion as descripcion_prioridad,
-            (SELECT GROUP_CONCAT(CONCAT(marca, " ", modelo) SEPARATOR ", ")
-             FROM dispositivos d WHERE d.orden_id = o.id) as equipos_resumen
+            p.nombre as nombre_prioridad,
+            p.recargo as recargo_prioridad
         ');
         $builder->join('clientes as c', 'c.id = o.cliente_id');
-        $builder->join('urgencias as u', 'u.id = o.urgencia_id', 'left');
+        $builder->join('prioridades as p', 'p.id = o.prioridad_id', 'left');
         $builder->orderBy('o.id', 'DESC');
         $builder->limit(10);
 

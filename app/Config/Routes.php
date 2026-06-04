@@ -149,7 +149,7 @@ $routes->group('admin', ['filter' => 'auth:admin'], function (RouteCollection $r
 
 });
 
-$routes->group('recepcionista', ['filter' => 'auth:recepcionista'], function ($routes) {
+$routes->group('recepcionista', ['filter' => 'auth:recepcion'], function ($routes) {
 
     // Dashboard
     $routes->get('dashboard', 'Recepcionista\DashboardController::index');
@@ -160,10 +160,12 @@ $routes->group('recepcionista', ['filter' => 'auth:recepcionista'], function ($r
     $routes->post('ordenes/guardar', 'Recepcionista\OrdenController::guardar');
     $routes->get('ordenes/ver/(:num)', 'Recepcionista\OrdenController::ver/$1');
     $routes->get('ordenes/imprimir/(:num)', 'Recepcionista\OrdenController::imprimir/$1');
+    $routes->get('ordenes/imprimir/(:num)/(:any)', 'Recepcionista\OrdenController::imprimir/$1/$2');
     $routes->post('ordenes/entregar/(:num)', 'Recepcionista\OrdenController::entregar/$1');
 
     // Dispositivos
     $routes->get('dispositivos/ver/(:num)', 'Recepcionista\DispositivoController::ver/$1');
+    $routes->post('dispositivos/entregar/(:num)', 'Recepcionista\DispositivoController::entregar/$1');
 });
 
 

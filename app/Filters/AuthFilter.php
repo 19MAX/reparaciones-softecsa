@@ -36,9 +36,10 @@ class AuthFilter implements FilterInterface
             $roleUsuario = session()->get('role');
 
             if (!in_array($roleUsuario, $arguments)) {
-                // Sesión existe pero no tiene permiso para esta sección
-                return redirect()->to(base_url('auth/login'))
-                    ->with('error', 'No tienes permiso para acceder a esta sección.');
+                // Sesión existe pero no tiene el rol requerido → redirigir al dashboard propio con error
+                $role = $arguments[0] ?? 'dashboard';
+                return redirect()->to(base_url($role . '/dashboard'))
+                    ->with('error', 'No tienes permiso para acceder a esa sección.');
             }
         }
     }

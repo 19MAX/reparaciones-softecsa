@@ -23,7 +23,7 @@ class LoginController extends BaseController
             switch ($role) {
                 case 'admin':
                     return redirect()->to('admin/dashboard');
-                case 'recepcionista':
+                case 'recepcion':
                     return redirect()->to('recepcionista/dashboard');
                 case 'tecnico':
                     return redirect()->to('tecnico/dashboard');
@@ -103,7 +103,7 @@ class LoginController extends BaseController
             case 'admin':
                 $redirectUrl = 'admin/dashboard';
                 break;
-            case 'recepcionista':
+            case 'recepcion':
                 $redirectUrl = 'recepcionista/dashboard';
                 break;
             case 'tecnico':

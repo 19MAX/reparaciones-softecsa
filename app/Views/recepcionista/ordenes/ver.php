@@ -49,10 +49,35 @@
 
                         <?php endif; ?>
 
-                        <a href="<?= base_url('recepcionista/ordenes/imprimir/' . $orden['id']) ?>" target="_blank"
-                            class="btn btn-secondary btn-sm me-2">
-                            <i class="fas fa-print me-1"></i> Imprimir
-                        </a>
+                        <div class="dropdown d-inline">
+                            <a class="btn btn-secondary btn-sm dropdown-toggle" href="#" role="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-print me-1"></i> Imprimir
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item"
+                                        href="<?= base_url('recepcionista/ordenes/imprimir/' . $orden['id'] . '/carta') ?>"
+                                        target="_blank">
+                                        Carta
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item"
+                                        href="<?= base_url('recepcionista/ordenes/imprimir/' . $orden['id'] . '/ticket') ?>"
+                                        target="_blank">
+                                        Ticket
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item"
+                                        href="<?= base_url('recepcionista/ordenes/imprimir/' . $orden['id']) ?>"
+                                        target="_blank">
+                                        Completo
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                         <a href="<?= base_url('recepcionista/ordenes') ?>" class="btn btn-primary btn-sm">
                             <i class="fas fa-arrow-left me-1"></i> Volver
                         </a>
