@@ -16,10 +16,10 @@ if ($tienePass) {
     try {
         $key = hex2bin(substr(hash('sha256', env('encryption.key')), 0, 64));
         $payload = base64_decode($dispositivo['clave_acceso']);
-        [$iv, $cifrado] = explode('::', $payload, 2);
+        [$ivB64, $cifrado] = explode('::', $payload, 2);
+        $iv = base64_decode($ivB64); // ✅ Decodificar el IV
         $claveVisible = openssl_decrypt($cifrado, 'AES-256-CBC', $key, 0, $iv);
-        if ($claveVisible === false)
-            $claveVisible = null;
+        if ($claveVisible === false) $claveVisible = null;
     } catch (\Throwable $e) {
         $claveVisible = null;
     }
@@ -551,10 +551,10 @@ if ($tienePass) {
                 </ul>
             </div>
             <div class="modal-footer border-0 pt-0">
-                <a href="<?= base_url('admin/clientes/ver/' . ($dispositivo['cliente_id'] ?? '')) ?>"
+                <!-- <a href="<?= base_url('admin/clientes/ver/' . ($dispositivo['cliente_id'] ?? '')) ?>"
                     class="btn btn-sm btn-outline-primary">
                     <i class="fas fa-external-link-alt me-1"></i> Ver perfil completo
-                </a>
+                </a> -->
                 <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
@@ -780,7 +780,7 @@ if ($tienePass) {
         if (query.length < 2) { resultsDiv.style.display = 'none'; return; }
 
         timerRepuesto = setTimeout(() => {
-            fetch(`<?= base_url('admin/repuestos/buscar') ?>?term=${encodeURIComponent(query)}`)
+            fetch(`<?= base_url('global/buscar-repuestos') ?>?term=${encodeURIComponent(query)}`)
                 .then(r => r.json())
                 .then(data => {
                     resultsDiv.innerHTML = '';

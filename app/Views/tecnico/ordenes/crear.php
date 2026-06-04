@@ -1512,7 +1512,7 @@ Nueva Orden de Trabajo
                 this.searchExecuted = false;
                 this.client = null;
                 try {
-                    const response = await fetch('<?= base_url('admin/clientes/buscarCedula') ?>', {
+                    const response = await fetch('<?= base_url('global/buscar-cliente') ?>', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': this.csrfHash },
                         body: JSON.stringify({ cedula: this.searchCedula, [this.csrfToken]: this.csrfHash })
@@ -1536,8 +1536,8 @@ Nueva Orden de Trabajo
             async saveClient() {
                 this.isSaving = true;
                 const url = this.modalMode === 'create'
-                    ? '<?= base_url('admin/clientes/crear-js') ?>'
-                    : '<?= base_url('admin/clientes/actualizar-js') ?>';
+                    ? '<?= base_url('global/crear-cliente') ?>'
+                    : '<?= base_url('global/actualizar-cliente') ?>';
                 try {
                     const response = await fetch(url, {
                         method: 'POST',

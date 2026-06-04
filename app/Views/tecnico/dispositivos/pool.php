@@ -7,13 +7,12 @@ Pool de Dispositivos (Sin Asignar)
 <?= $this->section('content') ?>
 
 <div class="page-header">
-    <h4 class="page-title">Dispositivos Sin Asignar</h4>
     <ul class="breadcrumbs ps-1 ms-0">
         <li class="nav-home">
             <a href="<?= base_url('tecnico/dashboard') ?>"><i class="icon-home"></i></a>
         </li>
         <li class="separator"><i class="icon-arrow-right"></i></li>
-        <li class="nav-item"><a href="#">Pool</a></li>
+        <li class="nav-item"><a href="#">Pool de dispositivos</a></li>
     </ul>
 </div>
 
@@ -30,9 +29,7 @@ Pool de Dispositivos (Sin Asignar)
                         <thead class="table-light text-muted" style="font-size: 0.8rem; text-transform: uppercase;">
                             <tr>
                                 <th>Orden</th>
-                                <th>Ingreso</th>
-                                <th>Equipo</th>
-                                <th>Cliente</th>
+                                <th>Equipo / Cliente</th>
                                 <th>Estado</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
@@ -41,22 +38,42 @@ Pool de Dispositivos (Sin Asignar)
                             <?php foreach ($sinAsignar as $dev): ?>
                                 <tr>
                                     <td>
-                                        <a href="<?= base_url('consulta/orden/' . $dev['codigo_orden']) ?>" target="_blank"
-                                            rel="noopener noreferrer" title="Ver seguimiento"><span
-                                                class="badge bg-light text-dark border"><?= esc($dev['codigo_orden']) ?></span></a>
+                                        <a href="<?= base_url('consulta/orden/' . $dev['codigo_orden']) ?>"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="text-decoration-none">
+
+                                            <div class="fw-bold text-primary">
+                                                #<?= esc($dev['codigo_orden']) ?>
+                                            </div>
+
+                                            <small class="text-muted d-block">
+                                                <?= date('d/m/Y', strtotime($dev['created_at'])) ?>
+                                            </small>
+
+                                            <small class="text-muted">
+                                                <?= date('H:i', strtotime($dev['created_at'])) ?>
+                                            </small>
+                                        </a>
                                     </td>
                                     <td>
-                                        <?= date('d/m/y H:i', strtotime($dev['created_at'])) ?>
-                                    </td>
-                                    <td>
-                                        <div class="fw-bold text-dark"><?= esc($dev['marca']) ?>     <?= esc($dev['modelo']) ?>
+                                        <div class="fw-semibold">
+                                            <?= esc($dev['tipo_dispositivo']) ?>
                                         </div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">
-                                            <?= esc($dev['tipo_dispositivo']) ?></div>
+
+                                        <small class="text-muted d-block">
+                                            <?= esc(trim(
+                                                ($dev['marca'] ?? '') . ' ' .
+                                                    ($dev['modelo'] ?? '')
+                                            )) ?>
+                                        </small>
+
+                                        <small class="d-block mt-1">
+                                            <?= esc($dev['cliente_nombre']) ?>
+                                            <?= esc($dev['cliente_apellido']) ?>
+                                        </small>
                                     </td>
-                                    <td>
-                                        <?= esc($dev['cliente_nombre']) ?>     <?= esc($dev['cliente_apellido']) ?>
-                                    </td>
+
                                     <td>
                                         <?= estadoPill($dev['estado']) ?>
                                     </td>
@@ -92,10 +109,11 @@ Pool de Dispositivos (Sin Asignar)
 
 <?= $this->section('scripts') ?>
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         $('#tabla-pool').DataTable({
-            language: { url: 'https://cdn.datatables.net/plug-ins/2.3.6/i18n/es-ES.json' },
-            order: [[1, 'asc']], // Más antiguos primero
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/2.3.6/i18n/es-ES.json'
+            },
         });
     });
 </script>

@@ -6,8 +6,7 @@
 
 <div class="page-inner">
     <div class="page-header">
-        <h4 class="page-title">Mis Reparaciones</h4>
-        <ul class="breadcrumbs">
+        <ul class="breadcrumbs ps-1 ms-0">
             <li class="nav-home">
                 <a href="<?= base_url('tecnico/dashboard') ?>">
                     <i class="icon-home"></i>
@@ -39,67 +38,131 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table id="tabla-mis-reparaciones" class="table table-hover table-sm align-middle">
-                            <thead class="table-light text-muted" style="font-size: 0.8rem; text-transform: uppercase;">
+                        <table id="tabla-mis-reparaciones" class="table table-sm table-hover align-middle">
+                            <thead>
                                 <tr>
                                     <th>Orden</th>
-                                    <!-- <th>Fecha Ingreso</th> -->
-                                    <th>Cliente</th>
-                                    <th>Equipo</th>
+                                    <th>Cliente / Equipo</th>
                                     <th>Estado</th>
-                                    <!-- <th>Est. Entrega</th> -->
                                     <th>Total</th>
-                                    <th>Acción</th>
+                                    <th width="140">Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody style="font-size: 0.85rem;">
+                            <tbody>
                                 <?php foreach ($reparaciones as $rep): ?>
                                     <tr>
+
+                                        <!-- Orden -->
                                         <td>
                                             <a href="<?= base_url('consulta/orden/' . $rep['numero_orden']) ?>"
-                                                target="_blank" rel="noopener noreferrer" title="Ver seguimiento"><span
-                                                    class="badge bg-light text-dark border"><?= esc($rep['numero_orden']) ?></span></a>
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="text-decoration-none">
+
+                                                <div class="fw-bold text-primary">
+                                                    #<?= esc($rep['numero_orden']) ?>
+                                                </div>
+
+                                                <small class="text-muted">
+                                                    <?= date('d/m/Y', strtotime($rep['fecha_ingreso'])) ?>
+                                                </small>
+                                            </a>
                                         </td>
-                                        <!-- <td><?= date('d/m/y H:i', strtotime($rep['fecha_ingreso'])) ?></td> -->
-                                        <td><?= esc($rep['cliente_nombre']) ?>     <?= esc($rep['cliente_apellido']) ?></td>
+
+                                        <!-- Cliente + Equipo -->
                                         <td>
-                                            <div class="d-flex flex-column">
-                                                <span class="fw-bold text-dark"><?= esc($rep['marca']) ?>
-                                                    <?= esc($rep['modelo']) ?></span>
-                                                <small class="text-muted"
-                                                    style="font-size: 0.75rem;"><?= esc($rep['tipo_dispositivo']) ?></small>
-                                                <?php if ($rep['serie_imei']): ?>
-                                                    <small class="text-muted" style="font-size: 0.75rem;">SN:
-                                                        <?= esc($rep['serie_imei']) ?></small>
-                                                <?php endif; ?>
+                                            <div class="fw-semibold">
+                                                <?= esc($rep['cliente_nombre']) ?>
+                                                <?= esc($rep['cliente_apellido']) ?>
                                             </div>
+
+                                            <small class="text-muted d-block">
+                                                <?= esc($rep['tipo_dispositivo']) ?>
+                                            </small>
+
+                                            <small class="d-block">
+                                                <?= esc(trim(
+                                                    ($rep['marca'] ?? '') . ' ' .
+                                                        ($rep['modelo'] ?? '')
+                                                )) ?>
+                                            </small>
+
+                                            <?php if (!empty($rep['serie_imei'])): ?>
+                                                <small class="text-muted d-block">
+                                                    SN: <?= esc($rep['serie_imei']) ?>
+                                                </small>
+                                            <?php endif; ?>
                                         </td>
+
+                                        <!-- Estado -->
                                         <td>
                                             <?= estadoPill($rep['estado']) ?>
                                         </td>
-                                        <!-- <td>
-                                            <?= $rep['fecha_estimada_entrega'] ? date('d/m/y', strtotime($rep['fecha_estimada_entrega'])) : '—' ?>
-                                        </td> -->
-                                        <td class="fw-bold text-success">
-                                            $<?= number_format($rep['precio_total'], 2) ?>
-                                        </td>
+
+                                        <!-- Total -->
                                         <td>
-                                            <div class="form-button-action">
-                                                <div class="dropdown d-inline">
-                                                    <a class="btn btn-link btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Imprimir">
+                                            <span class="fw-bold text-success">
+                                                $<?= number_format($rep['precio_total'], 2) ?>
+                                            </span>
+                                        </td>
+
+                                        <!-- Acciones -->
+                                        <td>
+                                            <div class="btn-group">
+
+                                                <!-- Ver detalle -->
+                                                <a href="<?= base_url('tecnico/dispositivos/detalle/' . $rep['id']) ?>"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    data-bs-toggle="tooltip"
+                                                    title="Ver detalle">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+
+                                                <!-- Imprimir -->
+                                                <div class="dropdown">
+                                                    <button
+                                                        class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
+                                                        aria-expanded="false">
                                                         <i class="fas fa-print"></i>
-                                                    </a>
-                                                    <ul class="dropdown-menu">
-                                                        <li><a class="dropdown-item" href="<?= base_url('tecnico/ordenes/imprimir/' . $rep['id'] . '/carta') ?>" target="_blank">Carta</a></li>
-                                                        <li><a class="dropdown-item" href="<?= base_url('tecnico/ordenes/imprimir/' . $rep['id'] . '/ticket') ?>" target="_blank">Ticket</a></li>
-                                                        <li><a class="dropdown-item" href="<?= base_url('tecnico/ordenes/imprimir/' . $rep['id']) ?>" target="_blank">Completo</a></li>
+                                                    </button>
+
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+
+                                                        <li>
+                                                            <a class="dropdown-item"
+                                                                href="<?= base_url('tecnico/ordenes/imprimir/' . $rep['id'] . '/ticket') ?>"
+                                                                target="_blank">
+                                                                <i class="fas fa-file-alt me-2"></i>
+                                                                Ticket
+                                                            </a>
+                                                        </li>
+
+                                                        <li>
+                                                            <a class="dropdown-item"
+                                                                href="<?= base_url('tecnico/ordenes/imprimir/' . $rep['id'] . '/carta') ?>"
+                                                                target="_blank">
+                                                                <i class="fas fa-file me-2"></i>
+                                                                Carta
+                                                            </a>
+                                                        </li>
+
+                                                        <li>
+                                                            <a class="dropdown-item"
+                                                                href="<?= base_url('tecnico/ordenes/imprimir/' . $rep['id'] . '/completo') ?>"
+                                                                target="_blank">
+                                                                <i class="fas fa-file-invoice me-2"></i>
+                                                                Completo
+                                                            </a>
+                                                        </li>
+
                                                     </ul>
                                                 </div>
-                                                <a href="<?= base_url('tecnico/dispositivos/detalle/' . $rep['id']) ?>" class="btn btn-link btn-primary" title="Ver Detalle">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
+
                                             </div>
                                         </td>
+
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -115,10 +178,12 @@
 
 <?= $this->section('scripts') ?>
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         $('#tabla-mis-reparaciones').DataTable({
             "pageLength": 10,
-            "order": [[1, "desc"]], // Ordenar por fecha de ingreso por defecto
+            "order": [
+                [1, "desc"]
+            ], // Ordenar por fecha de ingreso por defecto
             "language": {
                 "url": "https://cdn.datatables.net/plug-ins/2.3.6/i18n/es-ES.json"
             },
