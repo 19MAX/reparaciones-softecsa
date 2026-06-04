@@ -288,7 +288,8 @@ class ClientesController extends BaseController
                 'errors' => 'Error del sistema: ' . $e->getMessage()
             ]);
         }
-        }
+    }
+
     public function ver($id)
     {
         $cliente = $this->clienteModel->find($id);

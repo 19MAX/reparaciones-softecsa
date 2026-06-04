@@ -11,47 +11,54 @@ class DashboardController extends BaseController
     {
         $db = \Config\Database::connect();
 
-        // Obtener estadísticas del día
         $hoy = date('Y-m-d');
 
-        // Órdenes creadas hoy
         $ordenesHoy = $db->table('ordenes')
             ->where('DATE(created_at)', $hoy)
             ->countAllResults();
 
-        // Órdenes activas (no entregadas ni canceladas)
         $ordenesActivas = $db->table('ordenes')
             ->whereNotIn('estado', ['entregado', 'cancelado'])
             ->countAllResults();
 
-        // Órdenes listas para retiro
         $ordenesListasRetiro = $db->table('ordenes')
             ->where('estado', 'listo_para_retiro')
             ->countAllResults();
 
-        // Últimas 10 órdenes
-        $builder = $db->table('ordenes as o');
-        $builder->select('
-            o.*,
+        // Últimas órdenes
+        $builder = $db->table('ordenes o');
+
+        $builder->select("
+            o.id,
+            o.numero_orden,
+            o.estado,
+            o.created_at,
             c.nombres,
             c.apellidos,
-            p.nombre as nombre_prioridad
-        ');
-        $builder->join('clientes as c', 'c.id = o.cliente_id');
-        $builder->join('prioridades as p', 'p.id = o.prioridad_id', 'left');
-        $builder->orderBy('o.id', 'DESC');
+            (
+                SELECT GROUP_CONCAT(
+                    CONCAT(m.nombre, ' ', mo.nombre)
+                    SEPARATOR ', '
+                )
+                FROM dispositivos_orden d
+                INNER JOIN marcas m ON m.id = d.marca_id
+                INNER JOIN modelos mo ON mo.id = d.modelo_id
+                WHERE d.orden_id = o.id
+            ) as equipos_resumen
+        ");
+
+        $builder->join('clientes c', 'c.id = o.cliente_id');
+        $builder->orderBy('o.created_at', 'DESC');
         $builder->limit(10);
 
         $ordenesRecientes = $builder->get()->getResultArray();
 
-        $data = [
+        return view('recepcionista/dashboard', [
             'titulo' => 'Dashboard Recepcionista',
             'ordenesHoy' => $ordenesHoy,
             'ordenesActivas' => $ordenesActivas,
             'ordenesListasRetiro' => $ordenesListasRetiro,
             'ordenesRecientes' => $ordenesRecientes
-        ];
-
-        return view('recepcionista/dashboard', $data);
+        ]);
     }
 }
